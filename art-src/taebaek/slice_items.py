@@ -24,6 +24,15 @@ SHEETS = {
     'sheet_coal_props': ['ch_cart', 'ch_briquettes', 'mb_turbine_pole', 'mb_turbine_blades'],
     'sheet_animals': ['an_jay', 'an_goral', 'an_lenok', 'an_trilobite'],
     'sheet_misc': ['mb_samsu', 'hj_stone', 'hj_slide', 'hj_gatepost'],
+    # round 2: legends (four scenes each), festivals, autumn trees, stream fish, birds
+    'legend_hwangbuja': ['lg_hb_1', 'lg_hb_2', 'lg_hb_3', 'lg_hb_4'],
+    'legend_geomnyong': ['lg_gr_1', 'lg_gr_2', 'lg_gr_3', 'lg_gr_4'],
+    'legend_gumunso': ['lg_gm_1', 'lg_gm_2', 'lg_gm_3', 'lg_gm_4'],
+    'legend_danjong': ['lg_dj_1', 'lg_dj_2', 'lg_dj_3', 'lg_dj_4'],
+    'sheet_festival_a': ['fv_arch_wood', 'fv_arch_snow', 'fv_snow_dragon', 'fv_snow_castle'],
+    'sheet_festival_b': ['fv_snowman', 'fv_maple_red', 'fv_ginkgo', 'fv_maple_orange'],
+    'sheet_fish': ['fish_kumgang', 'fish_beodeul', 'fish_dukjung', 'fish_miyugi'],
+    'sheet_birds': ['bird_dipper', 'bird_mandarin', 'bird_scops', 'bird_woodpecker'],
 }
 
 

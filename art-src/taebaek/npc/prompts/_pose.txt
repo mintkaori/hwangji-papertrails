@@ -1,0 +1,7 @@
+Task: draw THREE poses of the character in the FIRST reference image, in one row from left to right, as paper cut-out figures in exactly the same art style as the first reference (handcrafted layered paper and felt cut-out; the second reference shows the same style).
+Keep the exact same character in all three poses: the same body shape and proportions, the same face, colours, outfit and accessories.
+Pose 1 (left): standing relaxed in a natural A-pose - both arms hanging down beside the body, a little away from it, hands low (NOT a T-pose, arms not stretched out sideways), both feet on the ground.
+Pose 2 (middle): walking toward the viewer - one foot lifted in mid-step, the arms swinging a little, still front-facing.
+Pose 3 (right): happily waving - one hand raised above the shoulder, the other arm hanging down.
+All three front-facing, the same height, standing on the same baseline, with wide empty gaps between them; nothing touches or overlaps; each figure is its own separate die-cut sticker with a thin even cream paper border all around.
+Style: flat front-facing orthographic view, visible paper fibre texture, soft gouache print shading, warm matte paper tones, no glossy highlights, no cast shadow, no ground plane, no text, no letters, no numbers.

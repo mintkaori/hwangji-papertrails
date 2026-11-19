@@ -63,6 +63,18 @@ ITEMS_SPEC = {
     # ---- animals / fossils (cards)
     'an_jay': (230, 'kit_animal', []), 'an_goral': (250, 'kit_animal', []), 'an_lenok': (250, 'kit_animal', []),
     'an_trilobite': (220, 'kit_prop', []),
+    # ---- round 2: legend storyboards (four scenes each)
+    **{f'lg_{k}_{i}': (232, 'kit_story', []) for k in ('hb', 'gr', 'gm', 'dj') for i in range(1, 5)},
+    # ---- festivals: one wooden and one snow arch, lettered per festival (4th item = source image)
+    'fv_arch_sunflower': (330, 'kit_arch', [((110, 160, 455, 228), ['태백 해바라기 축제'], F_JUA, '#8a3a22')], 'fv_arch_wood'),
+    'fv_arch_maple': (330, 'kit_arch', [((110, 160, 455, 228), ['철암 단풍 축제'], F_JUA, '#8a3a22')], 'fv_arch_wood'),
+    'fv_arch_azalea': (330, 'kit_arch', [((110, 160, 455, 228), ['태백산 철쭉제'], F_JUA, '#8a3a22')], 'fv_arch_wood'),
+    'fv_arch_snowfest': (340, 'kit_arch', [((120, 140, 495, 205), ['태백산 눈축제'], F_JUA, '#365f80')], 'fv_arch_snow'),
+    'fv_snow_dragon': (260, 'kit_prop', []), 'fv_snow_castle': (270, 'kit_prop', []), 'fv_snowman': (190, 'kit_prop', []),
+    'fv_maple_red': (300, 'kit_tree', []), 'fv_ginkgo': (270, 'kit_tree', []), 'fv_maple_orange': (290, 'kit_tree', []),
+    # ---- stream fish (the leaping fish of life/fish.js; an_lenok = 열목어)
+    'fish_kumgang': (170, 'kit_fish', []), 'fish_beodeul': (170, 'kit_fish', []), 'fish_dukjung': (170, 'kit_fish', []),
+    'fish_miyugi': (190, 'kit_fish', []),
 }
 
 
@@ -173,31 +185,44 @@ def main():
     used = max(s['rect'][1] + s['rect'][3] for s in meta['sprites'].values())
     assert used + GUTTER <= PACK_Y, used
 
-    sprites = []
-    for name, (tw, kind, signs) in ITEMS_SPEC.items():
-        im = Image.open(os.path.join(ITEMS, name + '.png')).convert('RGBA')
+    lettered = []
+    for name, spec in ITEMS_SPEC.items():
+        tw, kind, signs = spec[:3]
+        src = spec[3] if len(spec) > 3 else name
+        im = Image.open(os.path.join(ITEMS, src + '.png')).convert('RGBA')
         for box, lines, fname, col in signs:
             im = print_sign(im, box, lines, fname, col)
         if kind == 'kit_sails':
             im = centre_on_hub(im)
-        th = max(1, round(im.height * tw / im.width))
-        im = im.resize((tw, th), Image.LANCZOS)
-        sprites.append((name, kind, im))
+        lettered.append((name, kind, tw, im))
 
-    # shelf packing, tallest first
-    order = sorted(sprites, key=lambda s: -s[2].height)
-    x, y, shelf = GUTTER, PACK_Y, 0
-    placed = {}
-    for name, kind, im in order:
-        w, h = im.size
-        if x + w + GUTTER > AW:
-            x, y, shelf = GUTTER, y + shelf + GUTTER, 0
-        if y + h + GUTTER > AH:
-            raise SystemExit('atlas full at ' + name)
-        placed[name] = (x, y)
-        x += w + GUTTER
-        shelf = max(shelf, h)
-    print('packed down to y =', y + shelf, 'of', AH)
+    # shelf packing, tallest first; when the strip is too small every sprite shrinks a little and we try again
+    scale = 1.0
+    while True:
+        sprites = []
+        for name, kind, tw, im in lettered:
+            w = max(8, round(tw * scale))
+            sprites.append((name, kind, im.resize((w, max(1, round(im.height * w / im.width))), Image.LANCZOS)))
+        order = sorted(sprites, key=lambda s: -s[2].height)
+        x, y, shelf = GUTTER, PACK_Y, 0
+        placed = {}
+        full = False
+        for name, kind, im in order:
+            w, h = im.size
+            if x + w + GUTTER > AW:
+                x, y, shelf = GUTTER, y + shelf + GUTTER, 0
+            if y + h + GUTTER > AH:
+                full = True
+                break
+            placed[name] = (x, y)
+            x += w + GUTTER
+            shelf = max(shelf, h)
+        if not full:
+            break
+        scale *= 0.96
+        if scale < 0.55:
+            raise SystemExit('atlas full even at scale %.2f' % scale)
+    print('packed down to y =', y + shelf, 'of', AH, '- sprite scale %.2f' % scale)
 
     canvas = np.asarray(atlas).copy()
     for name, kind, im in sprites:

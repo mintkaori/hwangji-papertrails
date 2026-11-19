@@ -1,0 +1,7 @@
+Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.
+Items (Korean freshwater fish of the cold mountain streams of Taebaek, each seen from the side in a lively swimming pose):
+1 top-left: Kumgang fat minnow (geumgangmochi): a small slender fish, olive-brown back, a golden-orange stripe along the side, silvery belly.
+2 top-right: Chinese minnow (beodeulchi): a small slender olive-brown fish with tiny dark speckles and a rounded tail.
+3 bottom-left: Korean sculpin (dukjunggae): a stout fish with a big flat head, wide fan-like pectoral fins, mottled brown with dark bands.
+4 bottom-right: Korean slender catfish (miyugi): a long slim grey-brown catfish with two long whiskers and a long low fin along the belly.
+Style: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.

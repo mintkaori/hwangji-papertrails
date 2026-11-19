@@ -1,0 +1,7 @@
+Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.
+Items (four storybook scenes of a Korean folk tale, each scene a separate little cut-out vignette on its own small paper ground plate, gentle and readable for children):
+1 top-left: a long wingless water serpent (imugi) with a friendly face swimming in the waves of the sea near a small island.
+2 top-right: the serpent swimming up a long winding river between green mountains.
+3 bottom-left: the serpent wriggling up a narrow rocky gorge with a small waterfall, its body carving curving channels into the rock.
+4 bottom-right: a small round turquoise spring pool among mossy rocks in a forest, and a dragon rising from it into the clouds.
+Style: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.

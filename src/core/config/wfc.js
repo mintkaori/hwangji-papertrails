@@ -90,6 +90,9 @@ export const wfc = {
     ch_kkachibal: 1.6, ch_coal: 1.3, ch_mine: 1.4, ch_gumunso: 1.2,
     mb_wind: 1.6, mb_cabbage: 1.8, mb_sunflower: 1.2, mb_samsu: 1.2,
     tb_cheonjedan: 1.3, tb_yew: 1.4, gd_geomnyong: 1.4, gd_flowers: 1.5, gd_azalea: 1.3,
+    // round 2: legends / festivals sit on straight roads (path_straight weighs 3); the 단풍길 lane takes most autumn roads
+    ch_maples: 1.6, lg_hwangbuja: 1, lg_geomnyong: 1, lg_gumunso: 1, lg_danjong: 1,
+    fv_sunflower: 1.2, fv_snow: 1.2, fv_azalea: 1.1, fv_maple_gate: 1.0, fv_maple_lane: 2.4,
   },
 
   /**
@@ -103,6 +106,7 @@ export const wfc = {
     hills: [0], forest: [0, 1, 2, 3], grove: [0, 1, 2, 3], windmill: [0, 1, 2, 3],
     desert_dunes: [0, 2], desert_dunes_b: [0, 2], desert_dunes_c: [0, 2],
     // 황지 페이퍼트레일: the kit cards are flat elevations drawn for the default camera
-    hj_school: [0], hj_playground: [0], hj_pond: [0], hj_daiso: [0], hj_claw: [0], hj_library: [0], ch_kkachibal: [0], ch_coal: [0], ch_mine: [0], ch_gumunso: [0], mb_wind: [0], mb_cabbage: [0], mb_sunflower: [0], mb_samsu: [0], tb_cheonjedan: [0], tb_yew: [0], gd_geomnyong: [0], gd_flowers: [0], gd_azalea: [0], desert_cacti: [0, 1, 2, 3], desert_oasis: [0, 1, 2, 3], desert_ruin: [0, 2], snow_pines: [0, 1, 2, 3], snow_drifts: [0, 2], frozen_pond: [0], blossom_orchard: [0, 1, 2, 3], blossom_garden: [0, 1, 2, 3], deep_pines: [0, 1, 2, 3], mushroom_glade: [0, 1, 2, 3], fallen_log: [0, 1, 2, 3], barn_farm: [0, 1, 2, 3],
+    hj_school: [0], hj_playground: [0], hj_pond: [0], hj_daiso: [0], hj_claw: [0], hj_library: [0], ch_kkachibal: [0], ch_coal: [0], ch_mine: [0], ch_gumunso: [0], mb_wind: [0], mb_cabbage: [0], mb_sunflower: [0], mb_samsu: [0], tb_cheonjedan: [0], tb_yew: [0], gd_geomnyong: [0], gd_flowers: [0], gd_azalea: [0], ch_maples: [0],
+    lg_hwangbuja: [0], lg_geomnyong: [0], lg_gumunso: [0], lg_danjong: [0], fv_sunflower: [0], fv_snow: [0], fv_azalea: [0], fv_maple_gate: [0], fv_maple_lane: [0], desert_cacti: [0, 1, 2, 3], desert_oasis: [0, 1, 2, 3], desert_ruin: [0, 2], snow_pines: [0, 1, 2, 3], snow_drifts: [0, 2], frozen_pond: [0], blossom_orchard: [0, 1, 2, 3], blossom_garden: [0, 1, 2, 3], deep_pines: [0, 1, 2, 3], mushroom_glade: [0, 1, 2, 3], fallen_log: [0, 1, 2, 3], barn_farm: [0, 1, 2, 3],
   },
 };

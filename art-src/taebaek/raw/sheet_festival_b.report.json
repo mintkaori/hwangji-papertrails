@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.\nItems:\n1 top-left: a giant snowman snow sculpture with a red knitted scarf and a knitted hat.\n2 top-right: a Korean maple tree in full autumn colour with deep crimson red leaves.\n3 bottom-left: a golden yellow ginkgo tree in autumn.\n4 bottom-right: a Korean maple tree with bright orange-red leaves, a rounder crown than the first maple.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure magenta chroma-key fill (#FF00FF) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_festival_b.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_festival_b.png.raw.png",
+  "raw_bytes": 2205785,
+  "elapsed_seconds": 71.258,
+  "model": null,
+  "session_id": "01a1f40a-8eb2-7791-8123-0cbad85fbc73",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "magenta"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_festival_b.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 849028,
+    "fringe_pixels": 126,
+    "cleaned_transparent_rgb_pixels": 6741,
+    "alpha_zero_pct": 53.99,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_festival_b.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 849028,
+    "fringe_pixels": 126,
+    "cleaned_transparent_rgb_pixels": 6741,
+    "alpha_zero_pct": 53.99,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

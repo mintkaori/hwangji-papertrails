@@ -16,7 +16,8 @@ export const TILES = Object.entries(MODELS).map(([id, m]) =>
     weight: CFG.weights[id] ?? 1,
     // socketed tiles: every rotation is legal (the sockets decide which one is used);
     // all-grass tiles: rotation is free for the solver, so it is limited per tile for readability.
-    rotations: Object.freeze((isAllGrass(m.sockets) ? CFG.rotations[id] || ALL : ALL).slice()),
+    // 황지: a listed socketed tile is pinned too (the legend / festival roads only run north-south)
+    rotations: Object.freeze((CFG.rotations[id] || ALL).slice()),
     tags: Object.freeze(m.tags.slice()),
     // biome pass: optional per-biome weight multipliers (schema: top of core/models.js); null = everywhere, x1
     biomes: m.biomes ? Object.freeze({ ...m.biomes }) : null,

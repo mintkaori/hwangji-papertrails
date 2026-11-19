@@ -1,0 +1,60 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Task: draw THREE poses of the character in the FIRST reference image, in one row from left to right, as paper cut-out figures in exactly the same art style as the first reference (handcrafted layered paper and felt cut-out; the second reference shows the same style).\nKeep the exact same character in all three poses: the same body shape and proportions, the same face, colours, outfit and accessories.\nPose 1 (left): standing relaxed in a natural A-pose - both arms hanging down beside the body, a little away from it, hands low (NOT a T-pose, arms not stretched out sideways), both feet on the ground.\nPose 2 (middle): walking toward the viewer - one foot lifted in mid-step, the arms swinging a little, still front-facing.\nPose 3 (right): happily waving - one hand raised above the shoulder, the other arm hanging down.\nAll three front-facing, the same height, standing on the same baseline, with wide empty gaps between them; nothing touches or overlaps; each figure is its own separate die-cut sticker with a thin even cream paper border all around.\nStyle: flat front-facing orthographic view, visible paper fibre texture, soft gouache print shading, warm matte paper tones, no glossy highlights, no cast shadow, no ground plane, no text, no letters, no numbers.\nCharacter note: 이송미, an orange round creature with two long light-blue bunny ears and a belly striped pink, blue and yellow.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\pose\\bunny.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\pose\\bunny.png.raw.png",
+  "raw_bytes": 1858516,
+  "elapsed_seconds": 43.091,
+  "model": null,
+  "session_id": "01a1f408-c8a3-71f0-a3aa-f174b0c71123",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\bunny.png",
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\pose\\bunny.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1774x887",
+    "key": "green",
+    "keyed_pixels": 909967,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 5699,
+    "alpha_zero_pct": 57.83,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\pose\\bunny.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1774x887",
+    "key": "green",
+    "keyed_pixels": 909967,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 5699,
+    "alpha_zero_pct": 57.83,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

@@ -56,7 +56,7 @@ export const MODELS = {
   path_end: { sockets: S(g, g, p, g), tags: ['path'] }, // path comes from S, ends at centre (signpost)
   lantern_post: { sockets: S(p, g, p, g), tags: ['path', 'lantern'], biomes: B(1, 1.6, 2.6, 1.8, 2.2) }, // N-S path + lantern post on the east side
   house: { sockets: S(g, g, p, g), tags: ['path', 'house', 'blocker'], biomes: B(1, 0, 0, 1.1, 0.45) }, // house in the north half, door + path to S
-  village: { sockets: S(p, g, p, g), tags: ['path', 'house', 'village', 'blocker'], biomes: B(1, 0, 0, 1.0, 0.08) }, // N-S street, houses both sides
+  village: { sockets: S(p, g, p, g), tags: ['path', 'house', 'village', 'blocker'], biomes: B(1, 0, 0, 1.0, 0.5) }, // 황지: 철암 village streets // N-S street, houses both sides
   // round 3 (tiles): the hamlet set. village / village_b / village_green share the N-S street sockets and their lanes swing to
   // opposite sides, so two or three of them in a row read as one winding street. Every cottage shows its door gable to the lane.
   village_b: { sockets: S(p, g, p, g), tags: ['path', 'house', 'village', 'blocker'], biomes: { heartland: 1, blossom: 1.0 } }, // one large cottage east of the lane + flower garden
@@ -72,12 +72,6 @@ export const MODELS = {
   // The 'village' tag stays with the cottage street only (the `village` capture pose finds its nearest cell).
   desert_dunes: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.25 } }, // 황지: rolling ridges, rarer
   desert_dunes_b: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.25 } }, // long low slanted pair
-  desert_dunes_c: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: {} }, // 황지: retired (pointed sand crest)
-  desert_cacti: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: {} }, // 황지: retired (no cacti on 매봉산)
-  desert_camp: { sockets: S(g, g, p, g), tags: ['path', 'house', 'blocker'], biomes: {} }, // 황지: retired
-  desert_oasis: { sockets: S(g, g, g, g), tags: ['water', 'blocker'], biomes: {} }, // 황지: retired
-  desert_market: { sockets: S(p, g, p, g), tags: ['path', 'blocker'], biomes: {} }, // 황지: retired
-  desert_ruin: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 황지: retired
   snow_pines: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { snow: 2.2 } },
   snow_drifts: { sockets: S(g, g, g, g), tags: ['open'], biomes: { snow: 2.0 } },
   snow_cabin: { sockets: S(g, g, p, g), tags: ['path', 'house', 'blocker'], biomes: { snow: 3.0 } },
@@ -87,7 +81,7 @@ export const MODELS = {
   blossom_garden: { sockets: S(g, g, g, g), tags: ['open'], biomes: { blossom: 2.0 } },
   blossom_gazebo: { sockets: S(g, g, p, g), tags: ['path', 'landmark', 'blocker'], biomes: { blossom: 3.0 } },
   blossom_lane: { sockets: S(p, g, p, g), tags: ['path', 'forest'], biomes: { blossom: 1.6 } },
-  deep_pines: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { pinewood: 6.0 } },
+  deep_pines: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { pinewood: 2.2 } }, // 황지: 철암 is autumn now - fewer dark pines, room for maples
   mushroom_glade: { sockets: S(g, g, g, g), tags: ['open', 'landmark'], biomes: { pinewood: 1.5 } },
   fallen_log: { sockets: S(g, g, g, g), tags: ['blocker'], biomes: { pinewood: 1.8 } },
   watchtower: { sockets: S(g, g, p, g), tags: ['path', 'landmark', 'blocker'], biomes: { pinewood: 2.5 } },
@@ -117,6 +111,18 @@ export const MODELS = {
   gd_geomnyong: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { blossom: 1.0 } }, // 검룡소
   gd_flowers: { sockets: S(g, g, g, g), tags: ['open'], biomes: { blossom: 2.2 } }, // 금대봉 야생화
   gd_azalea: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { blossom: 1.6 } }, // 철쭉·함박꽃나무·신갈나무
+  ch_maples: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { pinewood: 2.4 } }, // 철암 단풍 군락 (maple, ginkgo, oak)
+  // --- 황지 round 2: legend trails and festivals on north-south roads (rot 0 only: CONFIG.wfc.rotations).
+  // Story cards stand beside the road; game/npcs.js tells the tale as the traveller walks through.
+  lg_hwangbuja: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { heartland: 0.25 } }, // 황지연못 황부자 전설 (also pinned at the start)
+  lg_geomnyong: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { blossom: 0.6 } }, // 검룡소 이무기 전설
+  lg_gumunso: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { pinewood: 0.6 } }, // 구문소 백룡·청룡 전설
+  lg_danjong: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { snow: 0.6 } }, // 태백산 산신 단종 전설
+  fv_sunflower: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { desert: 0.8 } }, // 태백 해바라기 축제 (구와우)
+  fv_snow: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { snow: 0.8 } }, // 태백산 눈축제
+  fv_azalea: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { blossom: 0.7 } }, // 태백산 철쭉제
+  fv_maple_gate: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { pinewood: 0.6 } }, // 철암 단풍 축제
+  fv_maple_lane: { sockets: S(p, g, p, g), tags: ['path', 'forest'], biomes: { pinewood: 3.2, heartland: 0.4 } }, // 단풍길: maples both sides
 };
 
 export const MODEL_IDS = Object.keys(MODELS);

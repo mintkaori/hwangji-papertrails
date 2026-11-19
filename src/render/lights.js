@@ -56,18 +56,23 @@ export function createLights({ scene, quality = 'high' }) {
     return out.normalize();
   }
 
+  // 황지: game/weather.js dims the sun under clouds, rain, fog and snow storms (0 = clear)
+  let weatherDim = 0;
   function applyTunables() {
-    setColorCached(key.color, L.key.color); key.intensity = L.key.intensity;
-    setColorCached(fill.color, L.fill.color); fill.intensity = L.fill.intensity;
-    setColorCached(hemi.color, L.hemi.sky); setColorCached(hemi.groundColor, L.hemi.ground); hemi.intensity = L.hemi.intensity;
+    const wd = Math.min(0.6, Math.max(0, weatherDim));
+    setColorCached(key.color, L.key.color); key.intensity = L.key.intensity * (1 - wd);
+    setColorCached(fill.color, L.fill.color); fill.intensity = L.fill.intensity * (1 - wd * 0.5);
+    setColorCached(hemi.color, L.hemi.sky); setColorCached(hemi.groundColor, L.hemi.ground); hemi.intensity = L.hemi.intensity * (1 - wd * 0.25);
     setColorCached(lantern.color, L.lantern.color); lantern.intensity = L.lantern.intensity;
     lantern.distance = L.lantern.distance; lantern.decay = L.lantern.decay;
     key.shadow.normalBias = L.shadow.normalBias;
-    key.shadow.intensity = L.shadow.intensity;
+    key.shadow.intensity = L.shadow.intensity * (1 - wd * 1.1);
   }
 
   return {
     key, fill, hemi, lantern,
+    /** 황지: weather dimming of the sun (0 clear .. 0.6 storm), set every frame by game/weather.js. */
+    setWeatherDim(d) { weatherDim = d; },
     /** Keep the rig, the shadow frustum and the lantern on the traveller / camera. */
     update(dt, traveller, camera) {
       applyTunables();

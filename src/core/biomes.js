@@ -1,20 +1,28 @@
 // FROZEN contract (owner: orchestrator): which BIOME a cell belongs to. Pure, deterministic, allocation-free
 // lookups shared by the WFC (tile choice), the world, weather / ambient life and the grade.
 //
-// Layout: a jittered Voronoi diagram of sites on a SITE-tile grid with a gentle domain warp (wobbly borders).
-// The site at the origin is always 'heartland' (the original look) and its four neighbours are fixed so every
-// biome lies within ~12 tiles of the start: east = desert, west = snow, south = blossom, north = pinewood.
-//
-//   heartland  the original warm autumn farmland            (leaves drifting, clear)
-//   desert     sand, dunes, cacti, tents, oasis              (heat haze, dust motes, hard sun)
-//   snow       snowy pines, cabins, frozen ponds             (snowfall, cool light)
-//   blossom    spring green, pink blossom trees, gardens     (petals, butterflies)
-//   pinewood   dark misty conifer forest, mushrooms, marsh   (light rain / mist, fireflies at night)
+// 황지 페이퍼트레일 - the year as wide rings: the start is the 황지 neighbourhood (heartland, autumn colours); around it
+// the seasons run outward in wide, wobbly rings, so a straight walk in ANY direction slowly passes through a whole
+// Taebaek year and starts over:
+//   heartland  황지 생활권 (the hub, radius SEASON_HUB)       가을   (leaves drifting)
+//   snow       태백산 눈꽃 능선, 천제단, 눈축제                  겨울   (snowfall, blizzards)
+//   blossom    금대봉 야생화, 검룡소, 철쭉제                    봄     (petals, butterflies, spring rain)
+//   desert     매봉산 바람의 언덕, 배추밭, 해바라기 축제          여름   (wind, showers, sea of clouds)
+//   pinewood   철암 탄광촌, 단풍 군락, 구문소                   가을   (falling maple leaves, fog)
+// Each ring is SEASON_BAND tiles wide; the borders wobble by a few tiles and cross-fade (biomeWeights).
 
 export const BIOMES = ['heartland', 'desert', 'snow', 'blossom', 'pinewood'];
 export const BIOME_INDEX = { heartland: 0, desert: 1, snow: 2, blossom: 3, pinewood: 4 };
-/** Grid pitch of the Voronoi sites, in tiles. */
+/** (legacy) grid pitch of the old Voronoi sites, in tiles. */
 export const BIOME_SITE = 11;
+/** Radius (tiles) of the 황지 hub and width (tiles) of one season ring. */
+export const SEASON_HUB = 11;
+export const SEASON_BAND = 16;
+/** Biome index of ring k (k = 0 is the first ring outside the hub): winter, spring, summer, autumn, winter ... */
+const RING = [2, 3, 1, 4];
+/** Season of each biome (Korean, for the UI) and the place it stands for. */
+export const SEASON_OF = { heartland: '가을', desert: '여름', snow: '겨울', blossom: '봄', pinewood: '가을' };
+export const PLACE_OF = { heartland: '황지 우리 동네', desert: '매봉산 바람의 언덕', snow: '태백산 눈꽃 능선', blossom: '금대봉 야생화 동산', pinewood: '철암 단풍 마을' };
 
 function h2(seed, x, y, k) {
   let h = (Math.imul(x | 0, 0x9e3779b1) ^ Math.imul(y | 0, 0x85ebca6b) ^ Math.imul((seed | 0) + k * 0x632be5ab, 0xc2b2ae35)) >>> 0;
@@ -42,23 +50,25 @@ function vnoise(seed, x, y, k) {
   return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
 }
 
-const _d = new Float64Array(BIOMES.length); // nearest site distance per biome (scratch)
+const _d = new Float64Array(BIOMES.length); // signed distance (tiles) to the nearest region of each biome (scratch)
 
-/** Fills _d with the distance (tiles) from (x, z) to the nearest site of each biome. x, z in TILE units (floats ok). */
+/**
+ * Fills _d with a SIGNED distance (tiles) from (x, z) to the nearest region of each biome: negative inside a region
+ * (minus the depth to its nearest border), positive outside. x, z in TILE units (floats ok).
+ */
 function distances(seed, x, z) {
   const wx = x + (vnoise(seed, x / 5.5, z / 5.5, 11) - 0.5) * 3.2;
   const wz = z + (vnoise(seed, x / 5.5, z / 5.5, 12) - 0.5) * 3.2;
-  const gx0 = Math.round(wx / BIOME_SITE); const gy0 = Math.round(wz / BIOME_SITE);
+  // a slow radial wobble of +-3.5 tiles, so the rings read as hills and valleys, not circles
+  const r = Math.max(0, Math.sqrt(wx * wx + wz * wz) + (vnoise(seed, wx / 13, wz / 13, 21) - 0.5) * 7);
   for (let i = 0; i < _d.length; i++) _d[i] = 1e9;
-  for (let gy = gy0 - 2; gy <= gy0 + 2; gy++) {
-    for (let gx = gx0 - 2; gx <= gx0 + 2; gx++) {
-      const origin = gx === 0 && gy === 0;
-      const sx = (gx + (origin ? 0 : (h2(seed, gx, gy, 1) - 0.5) * 0.7)) * BIOME_SITE;
-      const sz = (gy + (origin ? 0 : (h2(seed, gx, gy, 2) - 0.5) * 0.7)) * BIOME_SITE;
-      const d = Math.sqrt((wx - sx) * (wx - sx) + (wz - sz) * (wz - sz));
-      const b = siteBiome(seed, gx, gy);
-      if (d < _d[b]) _d[b] = d;
-    }
+  _d[0] = r - SEASON_HUB; // the hub: [0, SEASON_HUB]
+  const k0 = Math.floor((r - SEASON_HUB) / SEASON_BAND);
+  for (let k = Math.max(0, k0 - 4); k <= k0 + 4; k++) {
+    const a = SEASON_HUB + k * SEASON_BAND; const b = a + SEASON_BAND;
+    const s = r < a ? a - r : r > b ? r - b : -Math.min(r - a, b - r);
+    const bi = RING[k % RING.length];
+    if (s < _d[bi]) _d[bi] = s;
   }
 }
 

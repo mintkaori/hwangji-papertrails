@@ -30,6 +30,8 @@ export const world = {
   /** Padding around LOW solid pieces (logs, boulders, fences, crates ...: tops between lowBlockMinHeight and blockMinHeight). */
   lowBlockerPadding: 0.04,
   lowBlockMinHeight: 0.2,
+  /** 황지: ground cover (grass, flowers, crops, reeds, ferns, small mushrooms) and animal cards lower than this are walked through. */
+  coverMaxHeight: 0.5,
   /** Padding kept on a path strip (lamps / lane trees brush the strip; walls and doors still stop the traveller). */
   pathPadding: 0.03,
   /** Hollow shapes (cabins, prop rings) are filled solid: cells not reachable from the tile border at this padding. */
@@ -126,10 +128,11 @@ export const world = {
       prop: { hue: -5, sat: 1.04, tint: '#f7bfcd', amount: 0.07, gain: 1.0, lift: 0.35, keepWater: 0.9 },
       path: { color: '#f1e3c2', edge: '#b3975f', amount: 0.6, edgeAmount: 0.3 }, // cream garden path (the ground tint turned it lime)
     },
+    // 황지: 'pinewood' is 철암 in autumn - fallen maple leaves on the ground, coal-dark wood, warm light
     pinewood: {
-      ground: { hue: 10, sat: 0.9, tint: '#55766a', amount: 0.62, gain: 1.6, lift: 0.5, keepWater: 0.7 },
-      prop: { hue: 34, sat: 0.85, tint: '#4d7468', amount: 0.36, gain: 1.5, lift: 0.4, mul: 0.92, keepWater: 0.7 },
-      path: { color: '#c2b187', edge: '#5d5b3e', amount: 0.75, edgeAmount: 0.3 }, // pine-needle track: the one warm line in the teal wood
+      ground: { hue: -8, sat: 1.1, tint: '#b07a45', amount: 0.42, gain: 1.2, lift: 0.55, keepWater: 0.8 },
+      prop: { hue: -10, sat: 1.0, tint: '#c9884f', amount: 0.14, gain: 1.05, lift: 0.4, keepWater: 0.8 },
+      path: { color: '#d2b48a', edge: '#6b4a32', amount: 0.75, edgeAmount: 0.3 }, // leaf-strewn track
     },
   },
 };

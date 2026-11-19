@@ -291,7 +291,9 @@ const ORIGIN_FIXED = [[0, 0, 'lantern_post:1010'], [-1, -1, 'house:0100'], [0, -
   // the default camera): school + playground west of the start, 황지연못 east with 다이소 across from it and the claw
   // shop next door, the library on the far side of the house lane.
   [-1, 0, 'hj_school:0000'], [-1, 1, 'hj_playground:0000'], [1, 0, 'hj_pond:0000'], [1, -1, 'hj_daiso:0000'],
-  [2, -1, 'hj_claw:0000'], [-2, -1, 'hj_library:0000']];
+  [2, -1, 'hj_claw:0000'], [-2, -1, 'hj_library:0000'],
+  // round 2: the 황부자 legend trail on the straight just south-east of the start
+  [1, 2, 'lg_hwangbuja:1010']];
 /** Pinned-only tiles: zero weight everywhere (empty biome table), so they skip the domain check below. */
 const PIN_ONLY = /^hj_/;
 

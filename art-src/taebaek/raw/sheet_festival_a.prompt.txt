@@ -1,0 +1,7 @@
+Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.
+Items:
+1 top-left: a wooden village festival entrance arch gate with a long blank cream paper banner across the top (leave the banner completely blank), decorated with paper lanterns and flowers.
+2 top-right: a snowy winter festival arch gate built of snow blocks and pale blue ice with a long blank cream paper banner across the top (leave the banner completely blank).
+3 bottom-left: a large white snow sculpture of a friendly dragon, carved from packed snow.
+4 bottom-right: a large white snow sculpture of a fairy-tale castle with little towers, carved from packed snow.
+Style: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.

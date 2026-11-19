@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.\nItems (Korean freshwater fish of the cold mountain streams of Taebaek, each seen from the side in a lively swimming pose):\n1 top-left: Kumgang fat minnow (geumgangmochi): a small slender fish, olive-brown back, a golden-orange stripe along the side, silvery belly.\n2 top-right: Chinese minnow (beodeulchi): a small slender olive-brown fish with tiny dark speckles and a rounded tail.\n3 bottom-left: Korean sculpin (dukjunggae): a stout fish with a big flat head, wide fan-like pectoral fins, mottled brown with dark bands.\n4 bottom-right: Korean slender catfish (miyugi): a long slim grey-brown catfish with two long whiskers and a long low fin along the belly.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_fish.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_fish.png.raw.png",
+  "raw_bytes": 1737570,
+  "elapsed_seconds": 46.625,
+  "model": null,
+  "session_id": "01a1f40b-b448-7b03-a42a-7b2e8f03225b",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_fish.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1536x1024",
+    "key": "green",
+    "keyed_pixels": 1217278,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 4598,
+    "alpha_zero_pct": 77.39,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_fish.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1536x1024",
+    "key": "green",
+    "keyed_pixels": 1217278,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 4598,
+    "alpha_zero_pct": 77.39,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

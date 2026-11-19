@@ -306,8 +306,8 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
   const modelData = new Map();
 
   const PIECE_CLASS = (base) => (/^(tree|flowers|haystack|scarecrow|hedge|beehive)/.test(base) ? 1 : /^fence/.test(base) ? 2 : /^(bush|tuft)/.test(base) ? 3 : 0);
-  const LOW_RX = /(^|_)(log|boulder|rock|stone|crag|hedge|fence|hive|woodpile|crate|barrel|cart|well|fountain|bench|stall|sled|bed|stump|side_[ew]|ridge|dune|drift|ice|column|steps|pots|snowman|trough|bale|back_\d|front_\d|hay|tent|fire|pear|lamp|lantern|milestone|spring)/;
-  const SOFT_RX = /^(bush|tuft|flowers?|reeds?|fern|mushroom|shroom|sheep|cow|chicken|hen|pig|dog|cat|pet|goat|horse|duck|bird|grass)/;
+  // 황지: ground cover and animal cards (bushes are NOT cover any more: they look solid, so they block like everything else)
+  const SOFT_RX = /^(tuft|flowers?|reeds?|fern|mushroom|shroom|crop|cabbage|sheep|cow|chicken|hen|pig|dog|cat|pet|goat|horse|duck|bird|fish|grass)/;
   const _dT = new Float32Array(SDF_N * SDF_N);
   const _dL = new Float32Array(SDF_N * SDF_N);
   const _dK = new Float32Array(SDF_N * SDF_N);
@@ -379,7 +379,7 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
   }
 
   function analyse(model, parity = 0) {
-    const md = { sdf: null, sdfDry: null, sdfDryNF: null, deck: null, pond: model === 'pond', viewDep: false, odd: null, pivots: null, houseS: 1 };
+    const md = { sdf: null, sdfDry: null, sdfDryNF: null, sdfNoHay: null, deck: null, pond: model === 'pond', viewDep: false, odd: null, pivots: null, houseS: 1 };
     if (parity === 0) modelData.set(model, md);
     let root = null;
     try { root = assets.getTilePrototype(model).clone(true); } catch { return md; }
@@ -417,31 +417,41 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       // physics pass: what blocks is decided by piece class, not by height alone. Tall pieces block (padding
       // blockerPadding); waist-high SOLID pieces (name list) block with the smaller lowBlockerPadding; soft fillers
       // (bush, tuft, flowers, reeds, ferns, mushrooms, animals) never block.
-      let pc = 0; let lowName = false; let soft = false; let first = true; let hull = null;
+      let pc = 0; let soft = false; let first = true; let hull = null; let hay = false; let firstBase = '';
       for (let a = o; a && a !== root; a = a.parent) {
         const raw = String(a.name || '').replace(/^.*__/, '');
         const base = raw.replace(/_x[bf]$/, '');
         if (!base) continue;
         if (!pc) pc = PIECE_CLASS(base);
         if (first) {
-          soft = SOFT_RX.test(base); first = false;
+          soft = SOFT_RX.test(base); first = false; firstBase = base;
           hull = hulls.get(base);
           if (!hull) hulls.set(base, (hull = { cells: new Set(), bits: 0, cross: false }));
           if (raw !== base) hull.cross = true;
         }
-        if (LOW_RX.test(base)) lowName = true;
+        if (/^(haystack|beehive)/.test(base)) hay = true;
       }
       const top = box.max.y;
-      const isTall = top >= W.blockMinHeight && pc !== 3 && !(soft && top < W.blockMinHeight + 0.25);
-      const isLow = !isTall && !soft && pc !== 3 && lowName && top >= W.lowBlockMinHeight;
+      // 황지 페이퍼트레일 - ONE collision rule: ground cover (grass, tufts, flowers and crops, reeds, ferns, small
+      // mushrooms) and animal cards are walked through while they stay below the traveller's waist (coverMaxHeight);
+      // every other piece blocks once it is ankle-high (lowBlockMinHeight) - bushes included - with the smaller padding
+      // below blockMinHeight. A piece blocks exactly where it is drawn (the field variants below follow cullBiome).
+      // ground cover and animal cards always pass; only the (giant) mushrooms are solid once they reach his waist.
+      // Fences always block where they stand, however low they are.
+      const cover = soft && (!/^(mushroom|shroom)/.test(firstBase) || top < (W.coverMaxHeight ?? 0.5));
+      const isTall = !cover && top >= W.blockMinHeight;
+      const isLow = !cover && !isTall && (top >= W.lowBlockMinHeight || (pc === 2 && top >= 0.05));
       const tall = (isTall || isLow) && !(sp !== null && sp.thin[li] === 1);
       if (tall && turned && sp.cardJ[li] < 50) md.viewDep = true;
       let bits = 0;
       if (tall) {
-        bits = 1;
-        if (generic && pc !== 1) { bits |= 2; if (pc !== 2) bits |= 4; }
-        if (!generic) bits = 7;
-        if (isLow) bits <<= 3;
+        // variants: 1 = every piece | 2 = snow (class-1 props and bushes are not drawn) | 4 = desert (no fences either) |
+        // 64 = a meadow whose hay rick / beehive is not drawn (its tree and fences still block)
+        let v = 1;
+        if (!generic) v |= 2 | 4;
+        else if (pc !== 1 && pc !== 3) { v |= 2; if (pc !== 2) v |= 4; }
+        if (!hay) v |= 64;
+        bits = isLow ? ((v & 7) << 3) | (v & 64 ? 128 : 0) : v;
       }
       if (W.debugPieces !== false) (md.pieces || (md.pieces = [])).push([o.name, +top.toFixed(2), isTall ? 'T' : isLow ? 'L' : '-']);
       if (!tall && !deck) return;
@@ -524,6 +534,9 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       for (let i = 0; i < occ.length; i++) { const o = occ[i]; if (((o & 1) !== 0) !== ((o & 2) !== 0) || ((o & 8) !== 0) !== ((o & 16) !== 0)) dry = true; if (((o & 2) !== 0) !== ((o & 4) !== 0) || ((o & 16) !== 0) !== ((o & 32) !== 0)) nf = true; }
       md.sdfDry = dry ? buildField(occ, 2, 16, kind) : md.sdf;
       md.sdfDryNF = nf ? buildField(occ, 4, 32, kind) : md.sdfDry;
+      let nh = false;
+      for (let i = 0; i < occ.length; i++) { const o = occ[i]; if (((o & 1) !== 0) !== ((o & 64) !== 0) || ((o & 8) !== 0) !== ((o & 128) !== 0)) nh = true; }
+      md.sdfNoHay = nh ? buildField(occ, 64, 128, kind) : md.sdf;
     }
     if (deck) {
       let has = false;
@@ -1217,7 +1230,7 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     if (md.sdf === null || W.biomeCull === false) return md.sdf;
     if (cell.biome === 'snow') return md.sdfDry;
     if (cell.biome === 'desert') return md.sdfDryNF;
-    if ((cell.model === 'meadow' || cell.model === 'meadow_flowers') && hayHidden(cell.x, cell.z)) return md.sdfDry; // hidden hay rick does not block
+    if ((cell.model === 'meadow' || cell.model === 'meadow_flowers') && hayHidden(cell.x, cell.z)) return md.sdfNoHay || md.sdf; // hidden hay rick does not block (its tree still does)
     return md.sdf;
   }
 

@@ -24,7 +24,11 @@ const CAT = {
 // 황지 페이퍼트레일: the class mascots, redrawn as paper cut-outs (art-src/taebaek/npc, compose_npcs.py). One species
 // per mascot (sheet id npc_<id>) so each lives on its own home tile; they wander near home with a paper waddle (one
 // front-facing frame: hop + rock per step) and never follow. game/npcs.js gives them a speech bubble.
-const MASCOT = { size: 1, b: 'pet', walk: ['stand', 'stand'], idle: ['stand'], speed: 0.24, run: 0.9, step: 0.07, hop: 0.03, rock: 0.12, roam: 0.5, follow: 0, followTime: [8, 14], notice: 1.2 };
+// Poses: A-pose 'stand', walking 'step', 'wave' (greets the traveller, see C.greet). Each mascot lives in a few places
+// around the year (spawns below), so they are spread out instead of all standing in the start village.
+const MASCOT = { size: 1, b: 'pet', walk: ['stand', 'step'], idle: ['stand'], greet: 'wave', speed: 0.24, run: 0.9, step: 0.11, hop: 0.022, rock: 0.07, roam: 0.45, follow: 0, followTime: [8, 14], notice: 1.2 };
+// Taebaek birds (art-src/taebaek/items -> compose_npcs.py): one pose each
+const BIRD = { b: 'peck', fly: 1, walk: ['stand', 'stand'], idle: ['stand'], speed: 0.18, run: 1.6, step: 0.04, hop: 0.02, rock: 0.06, roam: 0.3, flee: 1.6 };
 const mascot = (id) => ({ ...MASCOT, coats: ['npc_' + id] });
 
 export const animals = {
@@ -58,7 +62,8 @@ export const animals = {
   followLost: 4.2,
   followCool: 25,
   followSide: 0.27,
-  /** Reaction radii (world units). */
+  /** Reaction radii (world units). greet = a mascot stops and waves (game/npcs.js talks inside the same radius). */
+  greet: 1.05,
   headsUp: 1.35,
   scatter: 0.75, // round 3: 0.6 -> 0.75 (hens scatter a step earlier, so the hop is seen)
   wag: 1.3,
@@ -108,6 +113,11 @@ export const animals = {
     npc_dog: mascot('dog'), npc_cat: mascot('cat'), npc_elephant: mascot('elephant'), npc_monkey: mascot('monkey'),
     npc_duck: mascot('duck'), npc_bear: mascot('bear'), npc_bunny: mascot('bunny'), npc_milk: mascot('milk'),
     npc_otter: mascot('otter'), npc_korea: mascot('korea'), npc_blob: mascot('blob'),
+    bird_jay: { ...BIRD, coats: ['bird_jay'], size: 1.5 }, // 어치, the city bird of Taebaek
+    bird_dipper: { ...BIRD, coats: ['bird_dipper'], size: 1.5, flee: 1.2 }, // 물까마귀 on the stream stones
+    bird_mandarin: { b: 'graze', coats: ['bird_mandarin'], walk: ['stand', 'stand'], idle: ['stand'], float: 'stand', size: 1.6, speed: 0.14, step: 0.05, hop: 0.004, rock: 0.07, roam: 0.22, arc: [0.1, 0.26], drift: 0.07 }, // 원앙
+    bird_scops: { b: 'perch', coats: ['bird_scops'], walk: ['stand', 'stand'], idle: ['stand'], size: 1.4, speed: 0, step: 1, hop: 0, rock: 0.03, roam: 0 }, // 소쩍새 (night)
+    bird_woodpecker: { b: 'perch', coats: ['bird_woodpecker'], walk: ['stand', 'stand'], idle: ['stand'], size: 1.45, speed: 0, step: 1, hop: 0, rock: 0.05, roam: 0 }, // 큰오색딱다구리
   },
 
   // spawns[biome][model] wins over spawns.all[model]. Entry: [species, chance, min, max, flags]
@@ -122,13 +132,30 @@ export const animals = {
   //        c = walks in a line behind the first one.
   spawns: {
     all: {
-      // 황지 페이퍼트레일: the mascots at home around the start (6th item = [east, south, spread] in tile space)
-      hj_school: [['npc_milk', 1, 1, 1, '', [0.28, 0.42, 0.1]], ['npc_korea', 1, 1, 1, '', [-0.3, 0.3, 0.1]]],
-      hj_playground: [['npc_monkey', 1, 1, 1, '', [-0.05, 0.4, 0.18]], ['npc_bunny', 1, 1, 1, '', [0.38, 0.1, 0.15]], ['npc_duck', 1, 1, 1, '', [-0.55, 0.55, 0.12]]],
-      hj_pond: [['npc_otter', 1, 1, 1, '', [-0.2, 0.8, 0.08]], ['npc_blob', 1, 1, 1, '', [0.5, 0.82, 0.06]]],
-      hj_daiso: [['npc_elephant', 1, 1, 1, '', [0.12, 0.42, 0.14]]],
-      hj_claw: [['npc_bear', 1, 1, 1, '', [0.32, 0.5, 0.1]], ['npc_cat', 1, 1, 1, '', [-0.32, 0.36, 0.1]]],
-      hj_library: [['npc_dog', 1, 1, 1, '', [0.22, 0.45, 0.14]]],
+      // 황지 페이퍼트레일: the mascots, spread over the year (6th item = [east, south, spread] in tile space)
+      hj_school: [['npc_milk', 1, 1, 1, '', [0.28, 0.42, 0.1]]], // 흰우유 welcomes him at school
+      hj_playground: [['npc_monkey', 1, 1, 1, '', [-0.05, 0.4, 0.18]]],
+      hj_pond: [['npc_blob', 1, 1, 1, '', [0.5, 0.82, 0.06]], ['bird_mandarin', 0.8, 1, 2, 'w']],
+      hj_claw: [['npc_bear', 1, 1, 1, '', [0.32, 0.5, 0.1]]],
+      hj_library: [['npc_cat', 1, 1, 1, '', [0.22, 0.45, 0.14]]],
+      lg_hwangbuja: [['npc_otter', 1, 1, 1, '', [0.3, 0.45, 0.06]]], // 수달이 tells the 황부자 tale
+      tb_cheonjedan: [['npc_korea', 1, 1, 1, '', [0.0, 0.62, 0.1]]], // 한국사람 at the 천제단 (개천절)
+      lg_danjong: [['npc_korea', 1, 1, 1, '', [0.3, 0.45, 0.06]]],
+      fv_snow: [['npc_cat', 1, 1, 1, '', [0.3, 0.6, 0.06]]], // 리노 loves the snow festival lights
+      gd_flowers: [['npc_bunny', 0.7, 1, 1, '', [0.0, 0.3, 0.15]]], // 이송미 among the wildflowers
+      fv_azalea: [['npc_bunny', 1, 1, 1, '', [0.3, 0.6, 0.06]]],
+      gd_geomnyong: [['npc_duck', 1, 1, 1, '', [0.0, 0.55, 0.1]]], // 파닥이 at 검룡소
+      lg_geomnyong: [['npc_duck', 1, 1, 1, '', [0.3, 0.45, 0.06]]],
+      fv_sunflower: [['npc_elephant', 1, 1, 1, '', [0.3, 0.6, 0.06]]], // 코돌이 at the sunflower festival
+      mb_cabbage: [['npc_elephant', 0.2, 1, 1, '', [0.0, 0.0, 0.2]]],
+      ch_mine: [['npc_dog', 1, 1, 1, '', [0.3, 0.55, 0.1]]], // 밤이 knows the coal-mining days
+      lg_gumunso: [['npc_otter', 1, 1, 1, '', [0.3, 0.45, 0.06]]],
+      ch_gumunso: [['npc_otter', 0.6, 1, 1, '', [0.0, 0.62, 0.1]]],
+      fv_maple_gate: [['npc_dog', 1, 1, 1, '', [0.3, 0.6, 0.06]]],
+      fv_maple_lane: [['bird_woodpecker', 0.3, 1, 1, 'd', 'at:tree'], ['bird_jay', 0.35, 1, 2, 'd']],
+      ch_maples: [['bird_woodpecker', 0.5, 1, 1, 'd', 'at:tree'], ['bird_scops', 0.4, 1, 1, 'np']],
+      tb_yew: [['bird_jay', 0.35, 1, 2, 'd'], ['bird_scops', 0.3, 1, 1, 'np']],
+      gd_azalea: [['bird_jay', 0.3, 1, 2, 'd'], ['bird_woodpecker', 0.25, 1, 1, 'd', 'at:tree']],
       house: [['cat', 1, 1, 1, 'o', 'door'], ['cat', 0.55, 1, 1, '', 'on:fence|barrels|well'], ['hen', 0.55, 2, 3, 'dh'], ['chick', 0.2, 1, 2, 'dh']],
       village: [['cat', 1, 1, 1, '', 'on:fence|woodpile|crates|barrels|hay'], ['cat', 0.7, 1, 1, '', 'door'], ['hen', 0.7, 3, 3, 'dh', 'in:fence_yard|cart'], ['dog', 0.7, 1, 1, '', 'at:cart']],
       manor: [['cat', 0.75, 1, 1, '', 'on:bench|barrel|fence'], ['cat', 0.5, 1, 1, '', 'door'], ['dog', 0.4, 1, 1, '', 'at:bench|barrel']],
@@ -136,13 +163,13 @@ export const animals = {
       market_square: [['dog', 0.75, 1, 1, '', 'at:cart'], ['cat', 0.7, 1, 1, '', 'on:crates|barrels'], ['cat', 0.3, 1, 1, ''], ['hen', 0.3, 2, 2, 'dh']],
       barn_farm: [['sheep', 0.95, 2, 2, 'h', 'in:fence_pad', [-0.5, 0.46, 0.27]], ['cow', 0.7, 1, 1, ''], ['hen', 0.8, 2, 3, 'dh'], ['chick', 0.5, 2, 2, 'dh'], ['cat', 0.6, 1, 1, '', 'on:fence_pad|hay|barrel_trough'], ['dog', 0.45, 1, 1, '', 'at:cart']],
       windmill: [['cat', 0.5, 1, 1, '', 'on:hay|fence'], ['sheep', 0.4, 2, 2, 'h'], ['hen', 0.3, 2, 2, 'dh'], ['dog', 0.3, 1, 1, '', 'at:cart']],
-      pond: [['duck', 1, 1, 1, 'w'], ['duck', 1, 2, 3, 'bh'], ['frog', 0.5, 1, 1, 'b'], ['cat', 0.4, 1, 1, '', 'door']],
+      pond: [['bird_mandarin', 0.6, 1, 2, 'w'], ['duck', 1, 1, 1, 'w'], ['duck', 1, 2, 3, 'bh'], ['frog', 0.5, 1, 1, 'b'], ['cat', 0.4, 1, 1, '', 'door']],
       // round 3 (resumed): rows for the new hamlet / river tiles (tiles round 3)
       village_b: [['cat', 1, 1, 1, '', 'on:woodpile|barrels|fence_gd'], ['cat', 0.6, 1, 1, '', 'door'], ['hen', 0.6, 2, 3, 'dh', 'in:fence_gd'], ['songbird', 0.35, 2, 2, 'dh']],
       village_green: [['cat', 0.9, 1, 1, '', 'on:bench'], ['dog', 0.65, 1, 1, '', 'at:guidepost|well|bench'], ['songbird', 0.5, 2, 3, 'dh'], ['hen', 0.35, 2, 3, 'dh'], ['squirrel', 0.3, 1, 1, 'd', 'at:tree']],
-      river_reeds: [['duck', 0.8, 1, 2, 'w'], ['duck', 0.7, 2, 2, 'bh'], ['frog', 0.4, 1, 1, 'b'], ['cat', 0.4, 1, 1, '', 'on:barrel']],
-      river_straight: [['duck', 0.4, 1, 2, 'w'], ['duck', 0.22, 1, 1, 'b']],
-      river_corner: [['duck', 0.4, 1, 2, 'w'], ['frog', 0.25, 1, 1, 'b']],
+      river_reeds: [['bird_mandarin', 0.4, 1, 2, 'w'], ['bird_dipper', 0.45, 1, 1, 'b'], ['duck', 0.8, 1, 2, 'w'], ['duck', 0.7, 2, 2, 'bh'], ['frog', 0.4, 1, 1, 'b'], ['cat', 0.4, 1, 1, '', 'on:barrel']],
+      river_straight: [['bird_dipper', 0.35, 1, 1, 'b'], ['duck', 0.4, 1, 2, 'w'], ['duck', 0.22, 1, 1, 'b']],
+      river_corner: [['bird_dipper', 0.3, 1, 1, 'b'], ['duck', 0.4, 1, 2, 'w'], ['frog', 0.25, 1, 1, 'b']],
       river_source: [['frog', 0.45, 1, 1, 'b'], ['duck', 0.3, 1, 1, 'w']],
       bridge: [['duck', 0.35, 1, 2, 'w']],
       lantern_post: [['cat', 0.5, 1, 1, '', 'on:crates']],

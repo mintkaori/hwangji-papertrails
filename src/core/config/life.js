@@ -14,10 +14,12 @@ export const life = {
   biomes: {
     //            leaves dust  gusts snow  petals rain  mist  fireflies butterflies clouds birds
     heartland: { leaves: 0.8, dust: 0.0, gusts: 0.0, snow: 0.0, petals: 0.0, rain: 0.0, mist: 0.0, fireflies: 0.3, butterflies: 0.5, clouds: 0.8, birds: 1.0 },
-    desert:    { leaves: 0.0, dust: 1.0, gusts: 1.0, snow: 0.0, petals: 0.0, rain: 0.0, mist: 0.0, fireflies: 0.0, butterflies: 0.0, clouds: 0.7, birds: 0.5 },
+    // 황지: desert = 매봉산 summer (pollen in the wind, butterflies), pinewood = 철암 autumn (maple leaves, a little fog);
+    // game/weather.js adds rain, snow storms, fog and wind on top of these values
+    desert:    { leaves: 0.0, dust: 0.45, gusts: 0.8, snow: 0.0, petals: 0.0, rain: 0.0, mist: 0.0, fireflies: 0.5, butterflies: 0.8, clouds: 0.7, birds: 0.8 },
     snow:      { leaves: 0.0, dust: 0.0, gusts: 0.0, snow: 1.0, petals: 0.0, rain: 0.0, mist: 0.25, fireflies: 0.0, butterflies: 0.0, clouds: 0.6, birds: 0.5 },
     blossom:   { leaves: 0.0, dust: 0.0, gusts: 0.0, snow: 0.0, petals: 1.0, rain: 0.0, mist: 0.0, fireflies: 0.75, butterflies: 1.0, clouds: 0.7, birds: 1.0 },
-    pinewood:  { leaves: 0.12, dust: 0.0, gusts: 0.0, snow: 0.0, petals: 0.0, rain: 1.0, mist: 1.0, fireflies: 1.0, butterflies: 0.0, clouds: 0.6, birds: 0.6 },
+    pinewood:  { leaves: 1.0, dust: 0.0, gusts: 0.0, snow: 0.0, petals: 0.0, rain: 0.0, mist: 0.35, fireflies: 0.15, butterflies: 0.1, clouds: 0.7, birds: 0.8 },
   },
 
   /** Pool sizes (instances). Everything lives in two draw calls, so these only cost a few triangles each. */

@@ -119,7 +119,7 @@ export function createAnimals({ scene, renderer, world, traveller, daynight, ass
         const idle = [];
         for (const n of sp.idle || []) if (P[n]) idle.push(P[n]);
         if (!idle.length) idle.push(stand);
-        sets.push({ art: cn, stand, walk, idle, air: get(sp.air, null), sit: get(sp.sit, stand), sleep: get(sp.sleep, null), float: get(sp.float, null), stretch: get('stretch', null), alert: get('tail_up', null) });
+        sets.push({ art: cn, stand, walk, idle, air: get(sp.air, null), sit: get(sp.sit, stand), sleep: get(sp.sleep, null), float: get(sp.float, null), stretch: get('stretch', null), alert: get('tail_up', null), greet: get(sp.greet, null) });
       }
       if (sets.length) { SETS[id] = sets; SPEC[id] = sp; }
     }
@@ -842,6 +842,15 @@ export function createAnimals({ scene, renderer, world, traveller, daynight, ass
         case ST_IDLE: {
           const b = sp.b;
           if (b === 'pet') {
+            // 황지: a mascot stops, turns to him and waves while he is near (game/npcs.js shows what it says)
+            if (set.greet !== null && d2 < C.greet * C.greet) {
+              const wv = Math.sin(clock * 6.5 + i);
+              pose = wv > -0.35 ? set.greet : set.stand;
+              rock = wv * 0.035;
+              if (Math.abs(dx) > 0.05) sl.face = dx > 0 ? 1 : -1;
+              if (sl.t > sl.dur - 0.5) sl.t = Math.max(0, sl.dur - 0.5);
+              break;
+            }
             if (tryFollow(sl, d2, tsp)) break;
             if (sp.wag && d2 < C.wag * C.wag && pose !== set.sleep) { pose = set.stand; rock = Math.sin(clock * 13 + i) * 0.07; if (Math.abs(dx) > 0.15) sl.face = dx > 0 ? 1 : -1; } // up on its feet, wagging
           } else if (b === 'graze') {
@@ -860,7 +869,10 @@ export function createAnimals({ scene, renderer, world, traveller, daynight, ass
         case ST_WALK: case ST_RETURN: case ST_FLEE: {
           if (sl.st === ST_WALK) {
             const b = sp.b;
-            if (b === 'pet') { if (tryFollow(sl, d2, tsp)) break; }
+            if (b === 'pet') {
+              if (set.greet !== null && d2 < C.greet * C.greet) { sl.st = ST_IDLE; sl.t = 0; sl.dur = 2.5; sl.idle = set.stand; break; } // 황지: stops to greet him
+              if (tryFollow(sl, d2, tsp)) break;
+            }
             else if (b === 'peck') { if (d2 < C.scatter * C.scatter && startFlee(sl, dx, dz, sp.flee, !!sp.fly)) break; }
             else if (b === 'shy' && sl.cool <= 0 && d2 < sp.alert * sp.alert) { sl.st = ST_FREEZE; sl.t = 0; sl.dur = 0.3 + rnd(sl) * 0.3; sl.idle = set.stand; break; }
           }

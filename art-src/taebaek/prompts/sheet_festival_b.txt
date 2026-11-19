@@ -1,0 +1,5 @@
+Items:
+1 top-left: a giant snowman snow sculpture with a red knitted scarf and a knitted hat.
+2 top-right: a Korean maple tree in full autumn colour with deep crimson red leaves.
+3 bottom-left: a golden yellow ginkgo tree in autumn.
+4 bottom-right: a Korean maple tree with bright orange-red leaves, a rounder crown than the first maple.

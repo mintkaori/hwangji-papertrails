@@ -22,6 +22,8 @@ import { createLife } from './life/life.js';
 import { createAnimals } from './life/animals.js';
 import { createGame } from './game/index.js';
 import { createNpcs } from './game/npcs.js';
+import { createWeather } from './game/weather.js';
+import { createFish } from './life/fish.js';
 import { createViews } from './camera/views.js';
 // Allocation-free two-dimensional length.
 const hypot2 = (a, b) => Math.sqrt(a * a + b * b);
@@ -64,8 +66,11 @@ async function boot() {
   const game = createGame({ scene, renderer, world, wfc, traveller, follow, controls, lights, post, daynight, music, audio, life, assets, materials, seed, quality });
   follow.setAssistGate(game.modal);
   // 황지 페이퍼트레일: the class mascots talk; the 태백 places go into the 도감
-  const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, seed });
-  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game };
+  // 황지 페이퍼트레일: weather per season ring, leaping stream fish, talking mascots / legends / 도감
+  const weather = createWeather({ traveller, lights, seed });
+  const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, weather, seed });
+  const fish = createFish({ scene, world, traveller, camera: follow.camera, assets, daynight, onLeap: (id) => npcs.sawCreature(id) });
+  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights };
   // N: day / night, M: music on / off (keys only - no on-screen UI)
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -102,8 +107,10 @@ async function boot() {
     views.update(dt);
     follow.update(dt, traveller);
     daynight.update(dt);
+    weather.update();
     if (life) life.update(dt, p, follow.camera);
     if (animals) animals.update(dt);
+    fish.update(dt);
     game.update(dt);
     npcs.update(dt);
     lights.update(dt, traveller, follow.camera);

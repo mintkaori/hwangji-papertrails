@@ -1,0 +1,5 @@
+Items:
+1 top-left: a wooden village festival entrance arch gate with a long blank cream paper banner across the top (leave the banner completely blank), decorated with paper lanterns and flowers.
+2 top-right: a snowy winter festival arch gate built of snow blocks and pale blue ice with a long blank cream paper banner across the top (leave the banner completely blank).
+3 bottom-left: a large white snow sculpture of a friendly dragon, carved from packed snow.
+4 bottom-right: a large white snow sculpture of a fairy-tale castle with little towers, carved from packed snow.

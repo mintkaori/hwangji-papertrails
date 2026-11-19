@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.\nItems (four storybook scenes of a Korean folk tale, each scene a separate little cut-out vignette on its own small paper ground plate, gentle and readable for children):\n1 top-left: a long wingless water serpent (imugi) with a friendly face swimming in the waves of the sea near a small island.\n2 top-right: the serpent swimming up a long winding river between green mountains.\n3 bottom-left: the serpent wriggling up a narrow rocky gorge with a small waterfall, its body carving curving channels into the rock.\n4 bottom-right: a small round turquoise spring pool among mossy rocks in a forest, and a dragon rising from it into the clouds.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure magenta chroma-key fill (#FF00FF) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\legend_geomnyong.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\legend_geomnyong.png.raw.png",
+  "raw_bytes": 2293981,
+  "elapsed_seconds": 52.755,
+  "model": null,
+  "session_id": "01a1f40a-fd6e-7261-a1d3-64513ff4c8c7",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "magenta"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\legend_geomnyong.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 788100,
+    "fringe_pixels": 160,
+    "cleaned_transparent_rgb_pixels": 5166,
+    "alpha_zero_pct": 50.12,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\legend_geomnyong.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 788100,
+    "fringe_pixels": 160,
+    "cleaned_transparent_rgb_pixels": 5166,
+    "alpha_zero_pct": 50.12,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

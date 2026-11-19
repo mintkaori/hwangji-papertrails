@@ -140,7 +140,68 @@ export const KIT = {
     { s: 'gd_azalea', name: 'bush_azalea_a', w: 0.52, x: -0.58, z: 0.4 },
     { s: 'gd_azalea', name: 'bush_azalea_b', w: 0.5, x: 0.4, z: 0.56 },
   ] },
+  ch_maples: { donor: 'meadow', keep: /^(tuft)/, cards: [
+    { s: 'fv_maple_red', name: 'tree_maple_red', w: 0.86, x: -0.46, z: -0.56 },
+    { s: 'fv_ginkgo', name: 'tree_ginkgo', w: 0.7, x: 0.5, z: -0.62 },
+    { s: 'fv_maple_orange', name: 'tree_maple_orange', w: 0.8, x: 0.42, z: 0.1 },
+    { s: 'tb_oak', name: 'tree_oak', w: 0.74, x: -0.56, z: 0.32 },
+    { s: 'ch_briquettes', name: 'pile_briquettes', w: 0.26, x: 0.1, z: 0.76 },
+  ] },
+  // ---- round 2: legend trails (N-S road; story cards zig-zag beside it, oldest scene at the south end) -------------
+  lg_hwangbuja: story('hb'),
+  lg_geomnyong: story('gr'),
+  lg_gumunso: story('gm'),
+  lg_danjong: story('dj'),
+  // ---- festivals on a N-S road: a gate over the road, the festival around it ---------------------------------------
+  fv_sunflower: { donor: 'path_straight', keep: /^(tuft)/, cards: [
+    { s: 'fv_arch_sunflower', name: 'gate_sunflower', w: 1.02, x: 0, z: 0.12 },
+    { s: 'mb_sunflower', name: 'flowers_sun_a', w: 0.56, x: -0.62, z: -0.58 },
+    { s: 'mb_sunflower', name: 'flowers_sun_b', w: 0.56, x: 0.62, z: -0.5 },
+    { s: 'mb_sunflower', name: 'flowers_sun_c', w: 0.52, x: -0.66, z: 0.6 },
+    { s: 'mb_sunflower', name: 'flowers_sun_d', w: 0.52, x: 0.66, z: 0.66 },
+    { turbine: true, x: -0.76, z: -0.05, h: 1.0 },
+  ] },
+  fv_snow: { donor: 'path_straight', keep: /^(tuft)/, cards: [
+    { s: 'fv_arch_snowfest', name: 'gate_snowfest', w: 1.06, x: 0, z: 0.1 },
+    { s: 'fv_snow_dragon', name: 'statue_snow_dragon', w: 0.6, x: -0.62, z: -0.52 },
+    { s: 'fv_snow_castle', name: 'statue_snow_castle', w: 0.58, x: 0.62, z: -0.5 },
+    { s: 'fv_snowman', name: 'snowman_big', w: 0.34, x: 0.68, z: 0.6 },
+    { s: 'tb_yew_rime', name: 'tree_yew_rime', w: 0.5, x: -0.7, z: 0.62 },
+  ] },
+  fv_azalea: { donor: 'path_straight', keep: /^(tuft|flowers)/, cards: [
+    { s: 'fv_arch_azalea', name: 'gate_azalea', w: 1.0, x: 0, z: 0.12 },
+    { s: 'gd_azalea', name: 'bush_azalea_a', w: 0.52, x: -0.62, z: -0.5 },
+    { s: 'gd_azalea', name: 'bush_azalea_b', w: 0.5, x: 0.62, z: -0.56 },
+    { s: 'gd_azalea', name: 'bush_azalea_c', w: 0.46, x: 0.66, z: 0.62 },
+    { s: 'tb_magnolia', name: 'tree_magnolia', w: 0.56, x: -0.68, z: 0.56 },
+  ] },
+  fv_maple_gate: { donor: 'path_straight', keep: /^(tuft)/, cards: [
+    { s: 'fv_arch_maple', name: 'gate_maple', w: 1.0, x: 0, z: 0.12 },
+    { s: 'fv_maple_red', name: 'tree_maple_red', w: 0.7, x: -0.64, z: -0.56 },
+    { s: 'fv_maple_orange', name: 'tree_maple_orange', w: 0.66, x: 0.64, z: -0.5 },
+    { s: 'fv_ginkgo', name: 'tree_ginkgo', w: 0.5, x: 0.7, z: 0.62 },
+  ] },
+  // 단풍길: a straight lane between rows of maples and ginkgos; two or three in a row read as one long avenue
+  fv_maple_lane: { donor: 'path_straight', keep: /^(tuft)/, cards: [
+    { s: 'fv_maple_red', name: 'tree_maple_red', w: 0.66, x: -0.62, z: -0.62 },
+    { s: 'fv_ginkgo', name: 'tree_ginkgo', w: 0.56, x: 0.62, z: -0.58 },
+    { s: 'fv_maple_orange', name: 'tree_maple_orange', w: 0.64, x: -0.62, z: 0.12 },
+    { s: 'fv_maple_red', name: 'tree_maple_red_b', w: 0.62, x: 0.62, z: 0.16 },
+    { s: 'fv_ginkgo', name: 'tree_ginkgo_b', w: 0.5, x: -0.66, z: 0.76 },
+    { s: 'fv_maple_orange', name: 'tree_maple_orange_b', w: 0.56, x: 0.66, z: 0.8 },
+  ] },
 };
+
+/** A legend trail: four story cards beside a north-south road, scene 1 at the south end (where a walker coming up the
+ *  page meets it first). The names start with sign_ so the cards turn to the camera (world.js CARD_RX). */
+function story(key) {
+  return { donor: 'path_straight', keep: /^(tuft|flowers)/, story: key, cards: [
+    { s: `lg_${key}_1`, name: 'sign_story_1', w: 0.6, x: -0.62, z: 0.62 },
+    { s: `lg_${key}_2`, name: 'sign_story_2', w: 0.6, x: 0.62, z: 0.2 },
+    { s: `lg_${key}_3`, name: 'sign_story_3', w: 0.6, x: -0.62, z: -0.22 },
+    { s: `lg_${key}_4`, name: 'sign_story_4', w: 0.62, x: 0.62, z: -0.62 },
+  ] };
+}
 export const KIT_IDS = Object.keys(KIT);
 
 // ------------------------------------------------------------------------------------------------ geometry
@@ -330,6 +391,15 @@ function card(cd, sp, size, paper) {
       wall.userData = hingeData(side < 0 ? -Math.PI / 2 : Math.PI / 2, 0, 0);
       m.add(wall);
     }
+    // back wall: hangs off the top of the left wall's far edge would need a third hinge; it is simpler as its own
+    // card on the facade (nested), standing D behind it and folding flat against the facade like the side walls
+    const bw = w - inset * 2;
+    const BK = buffers();
+    addCard(BK, null, size, { w: bw, h: wh, front: tone.map((v) => v * 0.72), back: tone.map((v) => v * 0.85), edge: tone.map((v) => v * 0.5) });
+    const back = meshOf(cd.name.replace(/_front$/, '') + '_back', toGeometry(BK), paper);
+    back.position.set(0, 0, -D - HALF * 2 - 0.006);
+    back.userData = hingeData(Math.PI / 2, 0, 0); // folds toward the facade (inside the box)
+    m.add(back);
   }
   return m;
 }

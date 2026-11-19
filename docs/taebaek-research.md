@@ -80,6 +80,50 @@
   - 태백 도감 19곳: 처음 밟으면 한 줄 이야기 알림, 시드별 localStorage 저장. 한글 안내문·지도 라벨.
 - 남은 일: 상점·도서관 창문 야간 발광(유리 패널 위치 검출), 가로등 퀘스트를 하굣길 순서(학교→연못→다이소→도서관)로 묶기, 도감을 지도(Tab)에 표시, 학생 그림 카드 슬롯, 4개 시점 스크린샷 비평 루프.
 
+## 5. 2차 조사·구현 (2026-11-19)
+
+### 계절 고리 (넓은 지역에서 천천히 사계절)
+황지 동네(반경 11칸)를 가운데 두고 16칸 폭의 계절 고리가 바깥으로 이어진다. 어느 방향으로 곧게 걸어도 **가을(황지) → 겨울(태백산) → 봄(금대봉) → 여름(매봉산) → 가을(철암 단풍) → 겨울 …** 순서로 1년이 흐른다(걷기 속도 1.15 u/s 기준 고리 하나에 약 30초). 경계는 ±3.5칸 흔들리고 색·날씨가 서서히 섞인다(`src/core/biomes.js`). 철암은 철암단풍군락지에 맞춰 가을로 바꿨다.
+
+### 날씨 (`src/game/weather.js`)
+고리마다 80초 단위로 날씨가 바뀌고 9초 동안 섞인다. 맑음·구름·보슬비·소나기·안개·운해·센 바람·눈·함박눈·눈보라·상고대·꽃비·낙엽 바람. 근거: 평균 해발 902m 고원, 여름 평균 22.2℃·10년간 열대야 3회, 겨울이 길고 눈이 많음, 강한 바람과 풍력발전기, 운해.
+
+### 물고기·새
+| 대상 | 내용 | 게임 |
+| --- | --- | --- |
+| 열목어 | 천연기념물, 백천계곡·현동천 상류(태백산 자락) | 봄·가을 물가에서 뛰어오름 |
+| 금강모치 | 한반도 고유 냉수성 어종 | 봄·여름·가을 |
+| 버들치 | 태백산 계류의 우점종(한강·낙동강 수계 모두) | 모든 계절(겨울 제외) |
+| 둑중개 | 냉수성, 차가운 물 바닥 | 여름·가을 |
+| 미유기 | 한반도 고유 메기류, 야행성 | 밤에만 |
+| 어치 | 태백시 시조 | 숲·단풍길 |
+| 물까마귀 | 산간 계류 번식 조류(오대산 등 인근 국립공원 기록) | 강가 돌 위 |
+| 원앙 | 천연기념물 | 황지연못·연못·강 |
+| 소쩍새 | 천연기념물 | 밤 숲 |
+| 큰오색딱다구리 | 산림 조류(덕유산 등 기록) | 단풍 숲 |
+태백산 일대 조류는 71종(법정보호종 7, 천연기념물 5)이 관찰됐다. 물까마귀·소쩍새·큰오색딱다구리는 태백산 자체 기록을 찾지 못해 인근 국립공원 기록을 근거로 넣었다. 날아가는 새 그림(어치·꾀꼬리·원앙·물총새)은 이미지 생성 한도(codex)에 걸려 아직 못 만들었다.
+
+### 전설 길 (`lg_*` 타일, 이야기 카드 4장 + 이야기책 패널)
+- 황부자(황지연못): 쇠똥 시주 → 며느리의 쌀 → 뒤돌아본 며느리는 돌 → 집은 연못(상지 집터·중지 방앗간·하지 화장실). 시작 지점 남동쪽 직선 도로에 고정.
+- 검룡소: 서해의 이무기 검룡이 한강을 거슬러 올라와 몸부림친 자국(구곡), 한강 발원지.
+- 구문소: 황지천 백룡과 철암천 청룡이 낙동강을 두고 다툼 → 백룡이 석벽 밑을 뚫어 승리·승천(구멍 = 구문소, 자개문).
+- 단종: 흰 말을 타고 태백산 산신이 됨, 추익한의 산머루, 천제단 아래 단종비각.
+
+### 축제
+- 태백산 눈축제(1월 말~2월 초, 눈조각, 밤 10시까지 야간 관람) → 겨울 고리 `fv_snow`
+- 태백 해바라기 축제(구와우마을 7월 중순~8월 중순, 100만 송이, 옛 배추밭, 풍력발전기) → 여름 고리 `fv_sunflower`
+- 태백산 철쭉제(늦봄) → 봄 고리 `fv_azalea`
+- 철암 단풍 축제(철암단풍군락지, 10월 중순) → 가을 고리 `fv_maple_gate`, 단풍길 `fv_maple_lane`(가을 직선 도로 대부분이 단풍·은행나무 길)
+
+### 충돌 규칙 (하나로 정리, `src/world/world.js` analyse)
+| 지나감 | 막힘 |
+| --- | --- |
+| 풀·풀포기, 꽃·작물(배추·해바라기), 갈대, 고사리, 작은 버섯, 동물 카드 | 나무, 덤불(새로 막힘), 바위, 울타리(낮은 것도), 건물(상자 전체), 표지판·가로등, 수레·통·상자, 조각상, 거대 버섯 |
+보이지 않는 것은 막지 않는다: 사막·눈 고리에서 숨는 덤불, 건초더미가 숨은 목초지는 그 칸만 따로 계산한다(전에는 그 칸의 나무까지 통과됐다).
+
+### 마스코트
+A포즈(팔 내림)·걸음·손 흔들기 3포즈로 다시 그렸다. 황지 동네에 6명, 나머지는 계절 고리의 명소·축제·전설 길에 흩어져 있다. 가까이 가면 멈춰서 돌아보고 손을 흔들며, 그 장소·날씨·계절 이야기를 한다(스페이스로 다음 말).
+
 ## 출처
 - 식생: [태백산 식생 논문(koreascience)](https://koreascience.kr/article/JAKO201925462478399.pdf), [주목림 연구](https://koreascience.kr/article/JAKO199811920719145.page?lang=en), [서울신문 태백산 꽃](https://m.seoul.co.kr/news/2008/04/26/20080426026001)
 - 야생화: [강원 생태경관보전지역 현황](https://state.gwd.go.kr/portal/partinfo/environment/natureConservation/ecosystem), [금대봉 분주령 꽃길](https://m.seoul.co.kr/news/2009/04/23/20090423019002), [경향신문](https://www.khan.co.kr/article/200505171616071)
@@ -89,4 +133,5 @@
 - 구문소: [텔트립](https://www.telltrip.com/domestic-travel/taebaek-geumunso-ordovician-gorge-trail/), [고생대자연사박물관](https://www.ktriptips.com/kor/culture/1337616)
 - 황지연못·검룡소·삼수령: [텔트립 황지연못](https://www.telltrip.com/domestic-travel/taebaek-hwangji-pond-nakdong-river-source/), [서울신문 삼수령](https://m.seoul.co.kr/news/2003/06/26/20030626025001), [서울신문 新국토기행](https://m.seoul.co.kr/news/2016/06/23/20160623017004)
 - 천제단·주목: [경향 겨울 태백산](https://sports.khan.co.kr/article/200801162058236), [태백산 눈축제](https://www.wikitree.co.kr/articles/1114574)
+- 2차 조사: [태백산 계류 어류상](https://koreascience.or.kr/article/JAKO200211921060629.page?lang=ko), [태백산·소백산 조류상 비교](https://koreascience.kr/article/JAKO201610350830532.page?lang=en), [오대산 조류](https://koreascience.kr/article/JAKO199611920718436.page), [덕유산 조류](https://koreascience.kr/article/JAKO199411922083209.page?lang=ko), [황지못 전설(태백관광)](https://tour.taebaek.go.kr/tour/tour/quest/legend?articleSeq=40148), [구문소 생성 전설(태백시)](https://tour.taebaek.go.kr/tpmuseum/gumunso/gumunso_gstory/gumunso_gstory_legend), [구문소 용축제(강원일보)](https://www.kwnews.co.kr/article/201605241480420), [검룡소 이무기(세계일보)](https://www.segye.com/newsView/20120119004193), [검룡소 정비(서울시 한강)](https://hangang.seoul.go.kr/www/contents/770.do?mid=578), [단종 산신(경인일보)](https://www.kyeongin.com/article/1766874), [태백산 눈축제 2026(헤럴드)](https://www.heraldk.com/article/2026020417082216027), [해바라기 축제(텔트립)](https://www.telltrip.com/festival/%EC%97%AC%EB%A6%84%EC%97%90-%EB%A7%8C%EB%82%98%EB%8A%94-%ED%95%B4%EB%B0%94%EB%9D%BC%EA%B8%B0%EC%9D%98-%ED%99%A9%ED%99%80%EA%B2%BD-%EA%B5%AC%EC%99%80%EC%9A%B0%EB%A7%88%EC%9D%84%EC%97%90%EC%84%9C/), [철암단풍군락지(텔트립)](https://www.telltrip.com/domestic-travel/taebaek-cheoram-maple-colony/), [태백 여름 기후(서울신문)](https://m.seoul.co.kr/news/2025/07/07/20250707500130)
 - 탄광: [철암 까치발](https://v.daum.net/v/20250614004625669), [철암역두 선탄시설](https://dh.aks.ac.kr/~heritage/wiki/index.php/%ED%83%9C%EB%B0%B1_%EC%B2%A0%EC%95%94%EC%97%AD%EB%91%90_%EC%84%A0%ED%83%84%EC%8B%9C%EC%84%A4), [연탄 한우 실비집](https://brunch.co.kr/@ochan/104)
