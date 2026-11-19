@@ -1,0 +1,7 @@
+Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.
+Items (low plants and field strips, each seen from the front):
+1 top-left: a low cluster of Korean alpine wildflowers from Geumdaebong: purple-pink dog-tooth violets (Erythronium) with swept-back petals, small golden Leontice flowers and white star-shaped Megaleranthis flowers among green leaves.
+2 top-right: a clump of white irises with yellow markings and slender leaves.
+3 bottom-left: a long low strip of highland cabbage field: neat rows of round pale green napa cabbages on brown soil, about 3 times wider than tall.
+4 bottom-right: a patch of tall sunflowers with big golden heads and green leaves.
+Style: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.

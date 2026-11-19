@@ -1,0 +1,3 @@
+Task: draw the class mascot described below as a paper cut-out figure in the art style of the reference image.
+Pose: one single figure, full body, front-facing, standing upright with both feet on the ground and the arms held a little away from the body, centred with generous empty margin around it.
+Style: match the reference exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm matte paper tones, flat front-facing orthographic view, a clean die-cut silhouette with a thin even cream paper border all around the outline, no glossy plastic highlights, no cast shadow, no ground plane, no text, no letters, no numbers.

@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Subject: the historic Cheoram anthracite coal preparation plant in Taebaek (Korea's first coal sorting facility, 1930s): a tall industrial timber-and-steel coal processing tower with a long sloped conveyor belt gallery rising up to it, coal hoppers and chutes below, small black coal heap at the base, charcoal grey, soot black and rust-orange paper colours with cream trims. Front elevation, the whole structure visible with margin, about 1.3 times wider than tall.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\coal_plant.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\coal_plant.png.raw.png",
+  "raw_bytes": 2370324,
+  "elapsed_seconds": 61.177,
+  "model": null,
+  "session_id": "01a1f3a7-258f-7c12-9328-9db0d81ae342",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\coal_plant.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1430x1100",
+    "key": "green",
+    "keyed_pixels": 767903,
+    "fringe_pixels": 3243,
+    "cleaned_transparent_rgb_pixels": 4807,
+    "alpha_zero_pct": 48.82,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\coal_plant.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1430x1100",
+    "key": "green",
+    "keyed_pixels": 767903,
+    "fringe_pixels": 3243,
+    "cleaned_transparent_rgb_pixels": 4807,
+    "alpha_zero_pct": 48.82,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

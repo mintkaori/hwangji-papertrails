@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.\nItems (low plants and field strips, each seen from the front):\n1 top-left: a low cluster of Korean alpine wildflowers from Geumdaebong: purple-pink dog-tooth violets (Erythronium) with swept-back petals, small golden Leontice flowers and white star-shaped Megaleranthis flowers among green leaves.\n2 top-right: a clump of white irises with yellow markings and slender leaves.\n3 bottom-left: a long low strip of highland cabbage field: neat rows of round pale green napa cabbages on brown soil, about 3 times wider than tall.\n4 bottom-right: a patch of tall sunflowers with big golden heads and green leaves.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure magenta chroma-key fill (#FF00FF) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_flowers.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_flowers.png.raw.png",
+  "raw_bytes": 1947193,
+  "elapsed_seconds": 47.189,
+  "model": null,
+  "session_id": "01a1f3a5-d4a9-7003-a3ed-4afe9f1e14ba",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "magenta"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_flowers.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 1010152,
+    "fringe_pixels": 565,
+    "cleaned_transparent_rgb_pixels": 5097,
+    "alpha_zero_pct": 64.24,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_flowers.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 1010152,
+    "fringe_pixels": 565,
+    "cleaned_transparent_rgb_pixels": 5097,
+    "alpha_zero_pct": 64.24,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

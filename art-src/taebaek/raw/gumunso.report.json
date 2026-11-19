@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Subject: Gumunso in Taebaek, a natural monument: a large rock mountain of layered grey, slate and ochre limestone with a big natural round tunnel arch through its base where a turquoise river flows out, clearly visible horizontal sedimentary strata stripes with a few tiny trilobite fossils, a few small pine trees and autumn shrubs on top. Front elevation, the whole rock as one cut-out piece with margin, about 1.5 times wider than tall.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure magenta chroma-key fill (#FF00FF) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\gumunso.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\gumunso.png.raw.png",
+  "raw_bytes": 2833123,
+  "elapsed_seconds": 48.417,
+  "model": null,
+  "session_id": "01a1f3a8-f0fb-7020-9b3b-65b4e7439341",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "magenta"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\gumunso.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1536x1024",
+    "key": "magenta",
+    "keyed_pixels": 539992,
+    "fringe_pixels": 267,
+    "cleaned_transparent_rgb_pixels": 3026,
+    "alpha_zero_pct": 34.33,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\gumunso.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1536x1024",
+    "key": "magenta",
+    "keyed_pixels": 539992,
+    "fringe_pixels": 267,
+    "cleaned_transparent_rgb_pixels": 3026,
+    "alpha_zero_pct": 34.33,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

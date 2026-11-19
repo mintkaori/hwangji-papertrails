@@ -1,0 +1,7 @@
+Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.
+Items (each seen from the front):
+1 top-left: a small rusty mine cart full of black coal standing on a short piece of rail track.
+2 top-right: a neat stack of Korean cylindrical coal briquettes (yeontan) with round holes on top, charcoal black, about three high.
+3 bottom-left: a tall slim white wind turbine tower with its nacelle at the top and NO blades, standing on a small green mound.
+4 bottom-right: exactly three long slim white wind turbine blades joined at a round white hub, seen straight from the front like a propeller.
+Style: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.

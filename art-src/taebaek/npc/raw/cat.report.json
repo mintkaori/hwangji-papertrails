@@ -1,0 +1,60 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Task: redraw the character from the FIRST reference image as a paper cut-out figure in the art style of the SECOND reference image.\nKeep the exact same character: the same body shape and proportions, the same face and eye style, the same colours, outfit and accessories, so that children who know this mascot recognise it instantly. Do not add or remove accessories.\nPose: one single figure, full body, front-facing, standing upright with both feet on the ground and the arms held a little away from the body, centred with generous empty margin around it.\nStyle: match the second reference exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, the character's own colours kept clearly recognisable but softened into warm matte paper tones, flat front-facing orthographic view, a clean die-cut silhouette with a thin even cream paper border all around the outline, no glossy plastic highlights, no cast shadow, no ground plane, no text, no letters, no numbers.\nCharacter note: 리노, a black kitten with big yellow-and-brown eyes, pink inner ears, a small yellow star on the chest, curled tail.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\cat.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\cat.png.raw.png",
+  "raw_bytes": 1893287,
+  "elapsed_seconds": 52.58,
+  "model": null,
+  "session_id": "01a1f3d8-aa96-7b52-a165-3ccc7f739103",
+  "refs": [
+    "C:\\Users\\mintk\\blender-test\\chars\\src\\cat.png",
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\cat.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "green",
+    "keyed_pixels": 1022719,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 3174,
+    "alpha_zero_pct": 65.04,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\cat.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "green",
+    "keyed_pixels": 1022719,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 3174,
+    "alpha_zero_pct": 65.04,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Task: draw the class mascot described below as a paper cut-out figure in the art style of the reference image.\nPose: one single figure, full body, front-facing, standing upright with both feet on the ground and the arms held a little away from the body, centred with generous empty margin around it.\nStyle: match the reference exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm matte paper tones, flat front-facing orthographic view, a clean die-cut silhouette with a thin even cream paper border all around the outline, no glossy plastic highlights, no cast shadow, no ground plane, no text, no letters, no numbers.\nMascot: 수달이, a friendly brown otter standing upright: warm orange-brown fur, a round head with small round ears and a little tuft of fur on top, shiny black eyes, a dark brown nose, long thin whiskers, a happy open smile, a cream-coloured muzzle and a big cream belly patch, a long thick tail curving out at one side, and with one paw it holds a purple skateboard with light wooden edges and yellow wheels standing upright on its end beside it.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\otter2.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\otter2.png.raw.png",
+  "raw_bytes": 2211843,
+  "elapsed_seconds": 44.251,
+  "model": null,
+  "session_id": "01a1f3dd-9759-7f32-8869-06d37c2d3dbf",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\otter2.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1199x1312",
+    "key": "green",
+    "keyed_pixels": 836220,
+    "fringe_pixels": 265,
+    "cleaned_transparent_rgb_pixels": 3852,
+    "alpha_zero_pct": 53.16,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\npc\\raw\\otter2.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1199x1312",
+    "key": "green",
+    "keyed_pixels": 836220,
+    "fringe_pixels": 265,
+    "cleaned_transparent_rgb_pixels": 3852,
+    "alpha_zero_pct": 53.16,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

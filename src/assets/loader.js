@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CONFIG, TILE_SIZE, PATH_WIDTH, RIVER_WIDTH, FLAP_LAYER_GAP } from '../core/config.js';
 import { MODELS, MODEL_IDS, FALLBACK_MODEL } from '../core/models.js';
+import { buildKitTiles } from '../world/kit.js';
 
 const P = CONFIG.palette;
 
@@ -314,8 +315,9 @@ export async function loadAssets({ materials, renderer, quality } = {}) {
   };
   const noTex = () => ({ paper: null, paperNormal: null, paperRough: null, manifest: null });
 
-  const [tilesGltf, travGltf, textures, meta] = await Promise.all([
+  const [tilesGltf, travGltf, textures, meta, artAtlas] = await Promise.all([
     loadGLTF(A.tilesUrl), loadGLTF(A.travellerUrl), loadTextures(A, anisotropy).catch(noTex), fetchJSON(A.metaUrl),
+    fetchJSON(A.texturesBase + 'art/atlas.json'),
   ]);
 
   const protos = new Map();
@@ -342,6 +344,16 @@ export async function loadAssets({ materials, renderer, quality } = {}) {
       } catch (err) {
         warn('tile', id, 'failed:', err && err.message);
       }
+    }
+  }
+  // Taebaek card kit (world/kit.js): models without a Blender build, cut from the art atlas onto a donor tile's base
+  if (tilesGltf) {
+    const kit = buildKitTiles({ atlas: artAtlas, paper: mats.paper, donor: (id) => protos.get(id) || null });
+    for (const [id, g] of kit) {
+      if (protos.has(id) || !MODELS[id]) continue;
+      protos.set(id, g);
+      stats.tiles[id] = { kit: true };
+      fromGltf++;
     }
   }
   for (const id of MODEL_IDS) {

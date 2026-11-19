@@ -46,7 +46,8 @@ const OPT_T = new Uint8Array(NO);
 const MASK_LO = new Int32Array(12); // [dir*3 + socket] -> options having that socket on that side
 const MASK_HI = new Int32Array(12);
 const MASK_EX = new Int32Array(12); // biome pass: third word (options 64..95)
-if (NO > 96) throw new Error('wfc: more than 96 solver options (' + NO + '); widen the domain bitmask');
+const MASK_Q = new Int32Array(12); // taebaek pass: fourth word (options 96..127)
+if (NO > 128) throw new Error('wfc: more than 128 solver options (' + NO + '); widen the domain bitmask');
 const PATH_BITS = new Uint8Array(NO); // path sockets of an option as a 4-bit mask
 for (let o = 0; o < NO; o++) {
   OPT_T[o] = OPTIONS[o].t;
@@ -55,7 +56,8 @@ for (let o = 0; o < NO; o++) {
     SIG[o * 4 + d] = s;
     if (o < 32) MASK_LO[d * 3 + s] |= 1 << o;
     else if (o < 64) MASK_HI[d * 3 + s] |= 1 << (o - 32);
-    else MASK_EX[d * 3 + s] |= 1 << (o - 64);
+    else if (o < 96) MASK_EX[d * 3 + s] |= 1 << (o - 64);
+    else MASK_Q[d * 3 + s] |= 1 << (o - 96);
     if (s === P) PATH_BITS[o] |= BIT[d];
   }
 }
@@ -90,8 +92,9 @@ const OPT_BY = new Map(OPTIONS.map((o) => [o.tileId + ':' + o.sig.join(''), o.in
 const FALLBACK_OPT = OPT_BY.get(FALLBACK_TILE + ':0000');
 const HI_ALL = NO >= 64 ? -1 : NO > 32 ? (1 << (NO - 32)) - 1 : 0;
 const EX_ALL = NO >= 96 ? -1 : NO > 64 ? (1 << (NO - 64)) - 1 : 0;
-/** Is option o in the 96-bit domain (lo, hi, ex)? */
-const hasBit = (lo, hi, ex, o) => (o < 32 ? (lo >>> o) & 1 : o < 64 ? (hi >>> (o - 32)) & 1 : (ex >>> (o - 64)) & 1);
+const Q_ALL = NO >= 128 ? -1 : NO > 96 ? (1 << (NO - 96)) - 1 : 0;
+/** Is option o in the 128-bit domain (lo, hi, ex, q)? */
+const hasBit = (lo, hi, ex, q, o) => (o < 32 ? (lo >>> o) & 1 : o < 64 ? (hi >>> (o - 32)) & 1 : o < 96 ? (ex >>> (o - 64)) & 1 : (q >>> (o - 96)) & 1);
 
 const popcnt = (v) => {
   v -= (v >>> 1) & 0x55555555;
@@ -120,6 +123,7 @@ const WL = new Float64Array(NN * NO);
 const domLo = new Int32Array(NN);
 const domHi = new Int32Array(NN);
 const domEx = new Int32Array(NN);
+const domQ = new Int32Array(NN);
 const res = new Int8Array(NN);
 const ent = new Float64Array(NN);
 const entOk = new Uint8Array(NN);
@@ -130,6 +134,7 @@ const MAX_DEPTH = NN + 2;
 const stLo = new Int32Array(MAX_DEPTH * NN);
 const stHi = new Int32Array(MAX_DEPTH * NN);
 const stEx = new Int32Array(MAX_DEPTH * NN);
+const stQ = new Int32Array(MAX_DEPTH * NN);
 const stRes = new Int8Array(MAX_DEPTH * NN);
 const stCell = new Int16Array(MAX_DEPTH);
 const stOpt = new Int16Array(MAX_DEPTH);
@@ -281,7 +286,14 @@ function applyPath(mask) {
 // River: west border -> past the house -> under the bridge -> east border.
 const ORIGIN_ROAD = [[1, 3], [1, 2], [1, 1], [0, 1], [0, 0], [0, -1], [0, -2], [0, -3], [1, -3], [1, -4]];
 const ORIGIN_RIVER = [[-3, -3], [-2, -3], [-2, -2], [-1, -2], [0, -2], [1, -2], [2, -2], [2, -3], [3, -3], [4, -3]];
-const ORIGIN_FIXED = [[0, 0, 'lantern_post:1010'], [-1, -1, 'house:0100'], [0, -1, 'path_t:1011']];
+const ORIGIN_FIXED = [[0, 0, 'lantern_post:1010'], [-1, -1, 'house:0100'], [0, -1, 'path_t:1011'],
+  // 황지 페이퍼트레일: the neighbourhood the students walk every day, around the first steps of the road (all facing
+  // the default camera): school + playground west of the start, 황지연못 east with 다이소 across from it and the claw
+  // shop next door, the library on the far side of the house lane.
+  [-1, 0, 'hj_school:0000'], [-1, 1, 'hj_playground:0000'], [1, 0, 'hj_pond:0000'], [1, -1, 'hj_daiso:0000'],
+  [2, -1, 'hj_claw:0000'], [-2, -1, 'hj_library:0000']];
+/** Pinned-only tiles: zero weight everywhere (empty biome table), so they skip the domain check below. */
+const PIN_ONLY = /^hj_/;
 
 function mulberry(a) {
   a >>>= 0;
@@ -801,6 +813,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
       const lo = domLo[i];
       const hi = domHi[i];
       const ex = domEx[i];
+      const q = domQ[i];
       const x = i % N;
       const z = (i / N) | 0;
       for (let d = 0; d < 4; d++) {
@@ -812,15 +825,17 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
         let aLo = 0;
         let aHi = 0;
         let aEx = 0;
+        let aQ = 0;
         for (let s = 0; s < 3; s++) {
-          if ((lo & MASK_LO[d * 3 + s]) | (hi & MASK_HI[d * 3 + s]) | (ex & MASK_EX[d * 3 + s])) { aLo |= MASK_LO[od * 3 + s]; aHi |= MASK_HI[od * 3 + s]; aEx |= MASK_EX[od * 3 + s]; }
+          if ((lo & MASK_LO[d * 3 + s]) | (hi & MASK_HI[d * 3 + s]) | (ex & MASK_EX[d * 3 + s]) | (q & MASK_Q[d * 3 + s])) { aLo |= MASK_LO[od * 3 + s]; aHi |= MASK_HI[od * 3 + s]; aEx |= MASK_EX[od * 3 + s]; aQ |= MASK_Q[od * 3 + s]; }
         }
         const nLo = domLo[j] & aLo;
         const nHi = domHi[j] & aHi;
         const nEx = domEx[j] & aEx;
-        if (nLo !== domLo[j] || nHi !== domHi[j] || nEx !== domEx[j]) {
-          domLo[j] = nLo; domHi[j] = nHi; domEx[j] = nEx; entOk[j] = 0;
-          if ((nLo | nHi | nEx) === 0) { qHead = qTail = 0; inQueue.fill(0); return false; }
+        const nQ = domQ[j] & aQ;
+        if (nLo !== domLo[j] || nHi !== domHi[j] || nEx !== domEx[j] || nQ !== domQ[j]) {
+          domLo[j] = nLo; domHi[j] = nHi; domEx[j] = nEx; domQ[j] = nQ; entOk[j] = 0;
+          if ((nLo | nHi | nEx | nQ) === 0) { qHead = qTail = 0; inQueue.fill(0); return false; }
           enqueue(j);
         }
       }
@@ -833,11 +848,12 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
     const lo = domLo[i];
     const hi = domHi[i];
     const ex = domEx[i];
+    const q = domQ[i];
     const base = i * NO;
     let sum = 0;
     let sl = 0;
     for (let o = 0; o < NO; o++) {
-      if (hasBit(lo, hi, ex, o)) { sum += W[base + o]; sl += WL[base + o]; }
+      if (hasBit(lo, hi, ex, q, o)) { sum += W[base + o]; sl += WL[base + o]; }
     }
     return Math.log(sum) - sl / sum + rng() * 1e-4;
   }
@@ -849,6 +865,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
     const lo = domLo[i];
     const hi = domHi[i];
     const ex = domEx[i];
+    const q = domQ[i];
     const base = i * NO;
     const x = i % N;
     const z = (i / N) | 0;
@@ -900,7 +917,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
     let sum = 0;
     for (let o = 0; o < NO; o++) {
       let w = 0;
-      if (hasBit(lo, hi, ex, o)) {
+      if (hasBit(lo, hi, ex, q, o)) {
         w = W[base + o];
         const t = OPT_T[o];
         // landmarks: one of a kind per chunk, never side by side, spaced out, and not dropped into a tree mass
@@ -959,7 +976,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
     }
     if (!(sum > 0)) { // all soft factors hit zero: fall back to the plain domain
       sum = 0;
-      for (let o = 0; o < NO; o++) { pickW[o] = (hasBit(lo, hi, ex, o)) ? 1 : 0; sum += pickW[o]; }
+      for (let o = 0; o < NO; o++) { pickW[o] = (hasBit(lo, hi, ex, q, o)) ? 1 : 0; sum += pickW[o]; }
     }
     let r = rng() * sum;
     let last = -1;
@@ -973,11 +990,11 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
   }
 
   function setSingle(i, o) {
-    domLo[i] = o < 32 ? 1 << o : 0; domHi[i] = o >= 32 && o < 64 ? 1 << (o - 32) : 0; domEx[i] = o >= 64 ? 1 << (o - 64) : 0;
+    domLo[i] = o < 32 ? 1 << o : 0; domHi[i] = o >= 32 && o < 64 ? 1 << (o - 32) : 0; domEx[i] = o >= 64 && o < 96 ? 1 << (o - 64) : 0; domQ[i] = o >= 96 ? 1 << (o - 96) : 0;
     entOk[i] = 0;
   }
-  const singleOf = (i) => (domLo[i] ? 31 - Math.clz32(domLo[i]) : domHi[i] ? 63 - Math.clz32(domHi[i]) : 95 - Math.clz32(domEx[i]));
-  const inDom = (i, o) => hasBit(domLo[i], domHi[i], domEx[i], o);
+  const singleOf = (i) => (domLo[i] ? 31 - Math.clz32(domLo[i]) : domHi[i] ? 63 - Math.clz32(domHi[i]) : domEx[i] ? 95 - Math.clz32(domEx[i]) : 127 - Math.clz32(domQ[i]));
+  const inDom = (i, o) => hasBit(domLo[i], domHi[i], domEx[i], domQ[i], o);
 
   /** One WFC run over the planned chunk. Returns false when the backtrack budget is exhausted. */
   function solve(rng, isOrigin) {
@@ -988,20 +1005,21 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
       let lo = -1;
       let hi = HI_ALL;
       let ex = EX_ALL;
+      let qw = Q_ALL;
       for (let d = 0; d < 4; d++) {
         const q = req[i * 4 + d];
-        if (q < 0) { lo &= MASK_LO[d * 3 + G] | MASK_LO[d * 3 + P]; hi &= MASK_HI[d * 3 + G] | MASK_HI[d * 3 + P]; ex &= MASK_EX[d * 3 + G] | MASK_EX[d * 3 + P]; } else { lo &= MASK_LO[d * 3 + q]; hi &= MASK_HI[d * 3 + q]; ex &= MASK_EX[d * 3 + q]; }
+        if (q < 0) { lo &= MASK_LO[d * 3 + G] | MASK_LO[d * 3 + P]; hi &= MASK_HI[d * 3 + G] | MASK_HI[d * 3 + P]; ex &= MASK_EX[d * 3 + G] | MASK_EX[d * 3 + P]; qw &= MASK_Q[d * 3 + G] | MASK_Q[d * 3 + P]; } else { lo &= MASK_LO[d * 3 + q]; hi &= MASK_HI[d * 3 + q]; ex &= MASK_EX[d * 3 + q]; qw &= MASK_Q[d * 3 + q]; }
       }
-      for (let o = 0; o < NO; o++) if (!(W[i * NO + o] > 0)) { if (o < 32) lo &= ~(1 << o); else if (o < 64) hi &= ~(1 << (o - 32)); else ex &= ~(1 << (o - 64)); }
-      if ((lo | hi | ex) === 0) return false;
-      domLo[i] = lo; domHi[i] = hi; domEx[i] = ex; res[i] = -1; entOk[i] = 0;
+      for (let o = 0; o < NO; o++) if (!(W[i * NO + o] > 0)) { if (o < 32) lo &= ~(1 << o); else if (o < 64) hi &= ~(1 << (o - 32)); else if (o < 96) ex &= ~(1 << (o - 64)); else qw &= ~(1 << (o - 96)); }
+      if ((lo | hi | ex | qw) === 0) return false;
+      domLo[i] = lo; domHi[i] = hi; domEx[i] = ex; domQ[i] = qw; res[i] = -1; entOk[i] = 0;
       enqueue(i);
     }
     if (isOrigin) {
       for (const [x, z, key] of ORIGIN_FIXED) {
         const i = (z + OZ) * N + x + OX;
         const o = OPT_BY.get(key);
-        if (o === undefined || !inDom(i, o)) return false;
+        if (o === undefined || (!inDom(i, o) && !PIN_ONLY.test(key))) return false;
         setSingle(i, o);
       }
     }
@@ -1014,7 +1032,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
       let bestE = Infinity;
       for (let i = 0; i < NN; i++) {
         if (res[i] >= 0) continue;
-        if (popcnt(domLo[i]) + popcnt(domHi[i]) + popcnt(domEx[i]) === 1) { res[i] = singleOf(i); continue; } // decided by propagation
+        if (popcnt(domLo[i]) + popcnt(domHi[i]) + popcnt(domEx[i]) + popcnt(domQ[i]) === 1) { res[i] = singleOf(i); continue; } // decided by propagation
         if (!entOk[i]) { ent[i] = entropy(i, rng); entOk[i] = 1; }
         if (ent[i] < bestE) { bestE = ent[i]; best = i; }
       }
@@ -1023,6 +1041,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
       stLo.set(domLo, depth * NN);
       stHi.set(domHi, depth * NN);
       stEx.set(domEx, depth * NN);
+      stQ.set(domQ, depth * NN);
       stRes.set(res, depth * NN);
       const o = pick(best, rng);
       stCell[depth] = best;
@@ -1041,12 +1060,13 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
         domLo.set(stLo.subarray(depth * NN, depth * NN + NN));
         domHi.set(stHi.subarray(depth * NN, depth * NN + NN));
         domEx.set(stEx.subarray(depth * NN, depth * NN + NN));
+        domQ.set(stQ.subarray(depth * NN, depth * NN + NN));
         res.set(stRes.subarray(depth * NN, depth * NN + NN));
         entOk.fill(0);
         const c = stCell[depth];
         const b = stOpt[depth];
-        if (b < 32) domLo[c] &= ~(1 << b); else if (b < 64) domHi[c] &= ~(1 << (b - 32)); else domEx[c] &= ~(1 << (b - 64));
-        if ((domLo[c] | domHi[c] | domEx[c]) === 0) { ok = false; continue; }
+        if (b < 32) domLo[c] &= ~(1 << b); else if (b < 64) domHi[c] &= ~(1 << (b - 32)); else if (b < 96) domEx[c] &= ~(1 << (b - 64)); else domQ[c] &= ~(1 << (b - 96));
+        if ((domLo[c] | domHi[c] | domEx[c] | domQ[c]) === 0) { ok = false; continue; }
         enqueue(c);
         ok = propagate();
       }

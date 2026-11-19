@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Subject: the front facade of a Korean public elementary school building in the mountain town of Taebaek. A long three-storey modern school building with cream-beige walls and warm brick-red horizontal bands between floors, three tidy rows of evenly spaced classroom windows with white frames and warm light, a slightly taller central entrance block with a glass double door, a round white clock above the entrance, and an empty plain cream signboard band above the doors (leave it completely blank). Flat roof line. Wide landscape composition, the whole building visible with margin, about 2.4 times wider than tall.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\school_front.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\school_front.png.raw.png",
+  "raw_bytes": 2275326,
+  "elapsed_seconds": 47.649,
+  "model": null,
+  "session_id": "01a1f3a2-d959-7bc3-881c-9f4f24389df4",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\school_front.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1942x809",
+    "key": "green",
+    "keyed_pixels": 454894,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 3956,
+    "alpha_zero_pct": 28.95,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\school_front.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1942x809",
+    "key": "green",
+    "keyed_pixels": 454894,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 3956,
+    "alpha_zero_pct": 28.95,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

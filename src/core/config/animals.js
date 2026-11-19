@@ -21,6 +21,12 @@ const CAT = {
   follow: 0, /* user 2026-11-17: animals never follow the traveller (was 0.8) */ followTime: [22, 40], notice: 1.05,
 };
 
+// 황지 페이퍼트레일: the class mascots, redrawn as paper cut-outs (art-src/taebaek/npc, compose_npcs.py). One species
+// per mascot (sheet id npc_<id>) so each lives on its own home tile; they wander near home with a paper waddle (one
+// front-facing frame: hop + rock per step) and never follow. game/npcs.js gives them a speech bubble.
+const MASCOT = { size: 1, b: 'pet', walk: ['stand', 'stand'], idle: ['stand'], speed: 0.24, run: 0.9, step: 0.07, hop: 0.03, rock: 0.12, roam: 0.5, follow: 0, followTime: [8, 14], notice: 1.2 };
+const mascot = (id) => ({ ...MASCOT, coats: ['npc_' + id] });
+
 export const animals = {
   enabled: true,
   /** Instances alive at once (pool size), scan range around the traveller (world units), global spawn multiplier. */
@@ -99,6 +105,9 @@ export const animals = {
     lizard: { size: 1.4, b: 'shy', walk: ['stand', 'stand'], idle: ['stand'], speed: 0.9, run: 2.6, step: 0.04, hop: 0.0, rock: 0.09, roam: 0.5, alert: 0.9, flee: 1.0, dart: 1, zig: 0.35 },
     owl: { size: 1.15, b: 'perch', walk: ['perched', 'perched'], idle: ['perched'], speed: 0, step: 1, hop: 0, rock: 0.03, roam: 0 },
     penguin: { b: 'graze', walk: ['stand', 'waddle'], idle: ['stand'], speed: 0.2, step: 0.06, hop: 0.006, rock: 0.1, roam: 0.7, gap: 0.2, restless: 1 },
+    npc_dog: mascot('dog'), npc_cat: mascot('cat'), npc_elephant: mascot('elephant'), npc_monkey: mascot('monkey'),
+    npc_duck: mascot('duck'), npc_bear: mascot('bear'), npc_bunny: mascot('bunny'), npc_milk: mascot('milk'),
+    npc_otter: mascot('otter'), npc_korea: mascot('korea'), npc_blob: mascot('blob'),
   },
 
   // spawns[biome][model] wins over spawns.all[model]. Entry: [species, chance, min, max, flags]
@@ -113,6 +122,13 @@ export const animals = {
   //        c = walks in a line behind the first one.
   spawns: {
     all: {
+      // 황지 페이퍼트레일: the mascots at home around the start (6th item = [east, south, spread] in tile space)
+      hj_school: [['npc_milk', 1, 1, 1, '', [0.28, 0.42, 0.1]], ['npc_korea', 1, 1, 1, '', [-0.3, 0.3, 0.1]]],
+      hj_playground: [['npc_monkey', 1, 1, 1, '', [-0.05, 0.4, 0.18]], ['npc_bunny', 1, 1, 1, '', [0.38, 0.1, 0.15]], ['npc_duck', 1, 1, 1, '', [-0.55, 0.55, 0.12]]],
+      hj_pond: [['npc_otter', 1, 1, 1, '', [-0.2, 0.8, 0.08]], ['npc_blob', 1, 1, 1, '', [0.5, 0.82, 0.06]]],
+      hj_daiso: [['npc_elephant', 1, 1, 1, '', [0.12, 0.42, 0.14]]],
+      hj_claw: [['npc_bear', 1, 1, 1, '', [0.32, 0.5, 0.1]], ['npc_cat', 1, 1, 1, '', [-0.32, 0.36, 0.1]]],
+      hj_library: [['npc_dog', 1, 1, 1, '', [0.22, 0.45, 0.14]]],
       house: [['cat', 1, 1, 1, 'o', 'door'], ['cat', 0.55, 1, 1, '', 'on:fence|barrels|well'], ['hen', 0.55, 2, 3, 'dh'], ['chick', 0.2, 1, 2, 'dh']],
       village: [['cat', 1, 1, 1, '', 'on:fence|woodpile|crates|barrels|hay'], ['cat', 0.7, 1, 1, '', 'door'], ['hen', 0.7, 3, 3, 'dh', 'in:fence_yard|cart'], ['dog', 0.7, 1, 1, '', 'at:cart']],
       manor: [['cat', 0.75, 1, 1, '', 'on:bench|barrel|fence'], ['cat', 0.5, 1, 1, '', 'door'], ['dog', 0.4, 1, 1, '', 'at:bench|barrel']],
@@ -164,8 +180,8 @@ export const animals = {
       rocks: [['rabbit', 0.2, 1, 1, ''], ['fox', 0.12, 1, 1, '']],
     },
     desert: {
-      meadow: [['lizard', 0.35, 1, 2, 'd'], ['desert_fox', 0.3, 1, 1, 'n'], ['camel', 0.08, 1, 2, 'h']],
-      rocks: [['lizard', 0.5, 1, 2, 'd'], ['desert_fox', 0.3, 1, 1, 'n']],
+      meadow: [['rabbit', 0.25, 1, 2, ''], ['songbird', 0.25, 2, 3, 'dh'], ['fox', 0.2, 1, 1, 'n']], // 황지: 매봉산 highland (no camels)
+      rocks: [['rabbit', 0.25, 1, 1, ''], ['fox', 0.25, 1, 1, 'n']],
     },
     snow: {
       meadow: [['reindeer', 0.22, 2, 3, 'h'], ['snow_hare', 0.3, 1, 2, ''], ['arctic_fox', 0.15, 1, 1, '']],

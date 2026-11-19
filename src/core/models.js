@@ -61,7 +61,7 @@ export const MODELS = {
   // opposite sides, so two or three of them in a row read as one winding street. Every cottage shows its door gable to the lane.
   village_b: { sockets: S(p, g, p, g), tags: ['path', 'house', 'village', 'blocker'], biomes: { heartland: 1, blossom: 1.0 } }, // one large cottage east of the lane + flower garden
   village_green: { sockets: S(p, g, p, g), tags: ['path', 'village'], biomes: { heartland: 1, blossom: 1.0 } }, // no house: well, bench, lamp post, two trees
-  // (house_garden / house_paddock exist as builders in tiles_more.py but are not registered: wfc.js allows 96 solver options, 95 are used)
+  // (house_garden / house_paddock exist as builders in tiles_more.py but are not registered; wfc.js allows 128 solver options)
   // --- rivers ---------------------------------------------------------------------------------
   river_reeds: { sockets: S(r, g, r, g), tags: ['water'], biomes: { heartland: 1, blossom: 1, pinewood: 0.8 } }, // N-S river with a reed bank, a jetty and a boat (river_straight stays the universal piece)
   river_straight: { sockets: S(r, g, r, g), tags: ['water'] }, // N-S
@@ -70,14 +70,14 @@ export const MODELS = {
   bridge: { sockets: S(p, r, p, r), tags: ['path', 'water', 'bridge'] }, // path N-S on a bridge over an E-W river
   // --- biome pass: biome tiles (tools/blender/tiles_desert_snow.py, tiles_more.py). No heartland entry = never in the start biome.
   // The 'village' tag stays with the cottage street only (the `village` capture pose finds its nearest cell).
-  desert_dunes: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.8 } },
-  desert_dunes_b: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.7 } }, // long low slanted pair
-  desert_dunes_c: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.7 } }, // tall pointed crest
-  desert_cacti: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { desert: 1.8 } },
-  desert_camp: { sockets: S(g, g, p, g), tags: ['path', 'house', 'blocker'], biomes: { desert: 2.2 } },
-  desert_oasis: { sockets: S(g, g, g, g), tags: ['water', 'blocker'], biomes: { desert: 0.3 } },
-  desert_market: { sockets: S(p, g, p, g), tags: ['path', 'blocker'], biomes: { desert: 1.6 } },
-  desert_ruin: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { desert: 0.5 } },
+  desert_dunes: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.25 } }, // 황지: rolling ridges, rarer
+  desert_dunes_b: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: { desert: 0.25 } }, // long low slanted pair
+  desert_dunes_c: { sockets: S(g, g, g, g), tags: ['hills', 'blocker'], biomes: {} }, // 황지: retired (pointed sand crest)
+  desert_cacti: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: {} }, // 황지: retired (no cacti on 매봉산)
+  desert_camp: { sockets: S(g, g, p, g), tags: ['path', 'house', 'blocker'], biomes: {} }, // 황지: retired
+  desert_oasis: { sockets: S(g, g, g, g), tags: ['water', 'blocker'], biomes: {} }, // 황지: retired
+  desert_market: { sockets: S(p, g, p, g), tags: ['path', 'blocker'], biomes: {} }, // 황지: retired
+  desert_ruin: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 황지: retired
   snow_pines: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { snow: 2.2 } },
   snow_drifts: { sockets: S(g, g, g, g), tags: ['open'], biomes: { snow: 2.0 } },
   snow_cabin: { sockets: S(g, g, p, g), tags: ['path', 'house', 'blocker'], biomes: { snow: 3.0 } },
@@ -95,6 +95,28 @@ export const MODELS = {
   barn_farm: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { heartland: 0.16, blossom: 0.12 } },
   market_square: { sockets: S(p, p, p, p), tags: ['path', 'landmark'], biomes: { heartland: 1.0, blossom: 0.6 } },
   manor: { sockets: S(g, g, p, g), tags: ['path', 'house', 'landmark', 'blocker'], biomes: { heartland: 0.7, blossom: 0.5 } },
+  // --- 황지 페이퍼트레일: Taebaek tiles built in JS by world/kit.js (cards cut from the art atlas onto a donor base).
+  // The 황지 생활권 tiles are pinned around the start (ORIGIN_FIXED in world/wfc.js); their empty biome table keeps
+  // the solver from placing them anywhere else. All are all-grass and pinned to rot 0 (CONFIG.wfc.rotations).
+  hj_school: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 황지중앙초등학교 + 교문, 향나무, 개나리
+  hj_playground: { sockets: S(g, g, g, g), tags: ['open'], biomes: {} }, // 운동장: 미끄럼틀, 만국기
+  hj_pond: { sockets: S(g, g, g, g), tags: ['water', 'blocker'], biomes: {} }, // 황지연못 + 며느리상, 발원지 표지석
+  hj_daiso: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 다이소 태백황지점
+  hj_claw: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 황지로 인형뽑기
+  hj_library: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 태백산소드림도서관
+  ch_kkachibal: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 1.3 } }, // 철암 까치발 건물
+  ch_coal: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 0.9 } }, // 철암역두 선탄시설
+  ch_mine: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 1.0 } }, // 갱도 입구
+  ch_gumunso: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 0.8 } }, // 구문소 석문
+  mb_wind: { sockets: S(g, g, g, g), tags: ['blocker'], biomes: { desert: 2.0 } }, // 매봉산 풍력발전기 (the rotors spin)
+  mb_cabbage: { sockets: S(g, g, g, g), tags: ['open'], biomes: { desert: 2.6 } }, // 고랭지 배추밭
+  mb_sunflower: { sockets: S(g, g, g, g), tags: ['open'], biomes: { desert: 1.5 } }, // 구와우 해바라기
+  mb_samsu: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { desert: 0.9 } }, // 삼수령 조형물
+  tb_cheonjedan: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { snow: 1.0 } }, // 태백산 천제단
+  tb_yew: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { snow: 1.8 } }, // 주목·분비나무·사스래나무, 산양
+  gd_geomnyong: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { blossom: 1.0 } }, // 검룡소
+  gd_flowers: { sockets: S(g, g, g, g), tags: ['open'], biomes: { blossom: 2.2 } }, // 금대봉 야생화
+  gd_azalea: { sockets: S(g, g, g, g), tags: ['forest', 'blocker'], biomes: { blossom: 1.6 } }, // 철쭉·함박꽃나무·신갈나무
 };
 
 export const MODEL_IDS = Object.keys(MODELS);

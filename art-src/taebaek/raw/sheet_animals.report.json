@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.\nItems (animals and a fossil, each seen from the side):\n1 top-left: a Eurasian jay bird (the city bird of Taebaek): pinkish-brown body, bright blue barred wing patch, black moustache stripe, white rump, perched.\n2 top-right: a long-tailed goral, the Korean mountain goat: grey-brown shaggy coat, short black backward horns, standing.\n3 bottom-left: a Manchurian trout (lenok) fish: golden-brown body with dark spots and a reddish tail, leaping.\n4 bottom-right: a trilobite fossil imprinted in a round grey slate stone.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure green chroma-key fill (#00FF00) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_animals.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_animals.png.raw.png",
+  "raw_bytes": 1947663,
+  "elapsed_seconds": 46.842,
+  "model": null,
+  "session_id": "01a1f3a8-4966-7621-ac06-6b435aa8787d",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "green"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_animals.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "green",
+    "keyed_pixels": 1085477,
+    "fringe_pixels": 143,
+    "cleaned_transparent_rgb_pixels": 5864,
+    "alpha_zero_pct": 69.03,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_animals.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "green",
+    "keyed_pixels": 1085477,
+    "fringe_pixels": 143,
+    "cleaned_transparent_rgb_pixels": 5864,
+    "alpha_zero_pct": 69.03,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

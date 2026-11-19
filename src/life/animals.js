@@ -1047,6 +1047,23 @@ export function createAnimals({ scene, renderer, world, traveller, daynight, ass
       if (tex) tex.dispose();
       mesh.dispose();
     },
+    /**
+     * 황지 페이퍼트레일: the nearest shown mascot (species id 'npc_*') within r of world (x, z), written into `out`
+     * as { id, x, y, z, d }; returns false when there is none. Allocation-free (called every frame by game/npcs.js).
+     */
+    npcNear(x, z, r, out) {
+      let best = -1; let bd = r * r;
+      for (let i = 0; i < N; i++) {
+        const sl = slots[i];
+        if (!sl.live || sl.s < 0.5 || !sl.spec || !sl.spec.id || sl.spec.id.charCodeAt(0) !== 110 || !sl.spec.id.startsWith('npc_')) continue;
+        const dx = sl.x - x; const dz = sl.z - z; const d = dx * dx + dz * dz;
+        if (d < bd) { bd = d; best = i; }
+      }
+      if (best < 0) return false;
+      const sl = slots[best];
+      out.id = sl.spec.id; out.x = sl.x; out.y = sl.y + sl.lift; out.z = sl.z; out.d = Math.sqrt(bd);
+      return true;
+    },
     /** Slots in use / drawn right now / walking with the traveller / ever spawned. */
     stats() { return { loaded, pool: N, live, shown, followers, spawned, cells: cache.size, art: artNames.length, companion: comp !== null, companionAt: compSeen, companionLeft: compLeft }; },
     /** Debug: every live animal: { id, art, x, y, z, state, pose, shown, mode, home }. Allocates. */

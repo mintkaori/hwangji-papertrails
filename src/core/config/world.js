@@ -83,7 +83,7 @@ export const world = {
   waterPadding: 0.03,
   pondRadius: 0.62,
   /** Biome tiles with an off-centre pond: model id -> [u (east), v (south), radius] in the tile's rot-0 frame. */
-  ponds: { desert_oasis: [0.12, 0.16, 0.48], frozen_pond: [0.08, 0.2, 0.56] },
+  ponds: { desert_oasis: [0.12, 0.16, 0.48], frozen_pond: [0.08, 0.2, 0.56], hj_pond: [0, 0, 0.62] /* 황지연못 (pond donor base) */ },
   /** Bridge deck: walkable half-width and height profile fallback when the model has no deck surface. */
   deckHalfWidth: 0.31,
   deckFallbackHeight: 0.0,
@@ -108,10 +108,11 @@ export const world = {
   biomeTintKeep: { blossom: true },
   biomeTint: {
     heartland: { ground: {}, prop: {} },
+    // 황지 페이퍼트레일: 'desert' is 매봉산 바람의 언덕 - a cool green highland of cabbage fields (was sand)
     desert: {
-      ground: { tint: '#e2b878', amount: 0.86, gain: 0.5, lift: 0.86, keepWater: 0.75 },
-      prop: { hue: 8, sat: 0.66, tint: '#d8b877', amount: 0.36, gain: 1.1, lift: 0.3, keepWater: 0.6 },
-      path: { color: '#eed199', edge: '#c99a5e', amount: 0.9, edgeAmount: 0.3 }, // fixer pass: warm packed sand ~10 % lighter than the ground (was near-white tape)
+      ground: { hue: -6, sat: 1.05, tint: '#a8c784', amount: 0.42, gain: 1.15, lift: 0.62, keepWater: 0.85 },
+      prop: { hue: -4, sat: 0.98, tint: '#c6dba8', amount: 0.12, gain: 1.0, lift: 0.4, keepWater: 0.85 },
+      path: { color: '#dccaa0', edge: '#9c8456', amount: 0.75, edgeAmount: 0.3 }, // farm track
     },
     snow: {
       ground: { sat: 0.7, tint: '#d6e3f6', amount: 0.9, gain: 0.17, lift: 0.88, keepWater: 0.45 }, // look pass: flatter (gain 0.3 -> 0.17): the inked grass ticks of shared tiles read as dotted streaks on the snow

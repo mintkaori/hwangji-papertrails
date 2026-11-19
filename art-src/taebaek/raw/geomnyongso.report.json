@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Subject: Geomnyongso spring in Taebaek, the source of the Han River: a small round emerald-green pool set in mossy pale limestone rocks, clear water spilling out and winding down a twisting carved rock channel that looks like a dragon's body, ferns and green moss around the stones. Front view, the whole scene as one cut-out piece with margin, about 1.4 times wider than tall.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure magenta chroma-key fill (#FF00FF) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\geomnyongso.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\geomnyongso.png.raw.png",
+  "raw_bytes": 2794420,
+  "elapsed_seconds": 44.943,
+  "model": null,
+  "session_id": "01a1f3aa-70ac-7fc0-8a7e-c59cdcb97124",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "magenta"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\geomnyongso.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1477x1065",
+    "key": "magenta",
+    "keyed_pixels": 477170,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 3007,
+    "alpha_zero_pct": 30.33,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\geomnyongso.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1477x1065",
+    "key": "magenta",
+    "keyed_pixels": 477170,
+    "fringe_pixels": 0,
+    "cleaned_transparent_rgb_pixels": 3007,
+    "alpha_zero_pct": 30.33,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

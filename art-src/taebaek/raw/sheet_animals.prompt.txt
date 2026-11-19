@@ -1,0 +1,7 @@
+Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.
+Items (animals and a fossil, each seen from the side):
+1 top-left: a Eurasian jay bird (the city bird of Taebaek): pinkish-brown body, bright blue barred wing patch, black moustache stripe, white rump, perched.
+2 top-right: a long-tailed goral, the Korean mountain goat: grey-brown shaggy coat, short black backward horns, standing.
+3 bottom-left: a Manchurian trout (lenok) fish: golden-brown body with dark spots and a reddish tail, leaping.
+4 bottom-right: a trilobite fossil imprinted in a round grey slate stone.
+Style: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.

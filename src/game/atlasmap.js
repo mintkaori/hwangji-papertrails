@@ -397,9 +397,9 @@ export function createAtlasMap(ctx) {
     // ---- legend layout: groups flow into 1-3 rows along the bottom margin
     const s = progress.summary();
     const groups = [];
-    groups.push({ label: 'Scraps', kind: 'scraps', w: SCRAP_IDS.length * 1.3 });
-    groups.push({ label: 'Lanterns', kind: 'lamps', w: 2.3 });
-    groups.push({ label: 'Explored', kind: 'cells', w: 2.5 });
+    groups.push({ label: '추억 조각', kind: 'scraps', w: SCRAP_IDS.length * 1.3 });
+    groups.push({ label: '가로등', kind: 'lamps', w: 2.3 });
+    groups.push({ label: '탐험한 땅', kind: 'cells', w: 2.5 });
     groups.push({ label: '', kind: 'rose', w: 1.5 });
     const GAP = 0.7;
     const margin = Math.max(10, 3.4 * u);
