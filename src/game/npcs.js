@@ -186,7 +186,8 @@ const CONTACT = {
   place: 0.6, // to the middle of the place's tile - or, where a building fills it, as close as the ground lets him ...
   slack: 0.35, // ... plus this much
   bird: 1.1, // a bird sitting on the ground or on the water
-  fish: 1.9, // a fish leap (leaps happen 1.1 - 4.7 from him, game/fish.js)
+  fish: 2.6, // a fish leap (leaps happen 1.1 - 4.7 from him, life/fish.js) ...
+  shore: 0.9, // ... while he stands at the water's edge (water within this): the start is 1.4 from 황지연못
   friend: 0.85, // a mascot (it starts talking a little further out, at NEAR)
 };
 
@@ -407,17 +408,36 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
    * passes with its height `y` (life/life.js already only reports flocks that pass right overhead).
    */
   function sawCreature(id, x, z, y) {
-    if (!CREATURES[id] || seen.has(id)) return;
+    if (!CREATURES[id] || seen.has(id) || !moved) return;
     if (x !== undefined && y === undefined) {
       const p = traveller.position; const dx = x - p.x; const dz = z - p.z;
-      const r = id.startsWith('bird_') ? CONTACT.bird : CONTACT.fish;
+      const bird = id.startsWith('bird_');
+      const r = bird ? CONTACT.bird : CONTACT.fish;
       if (dx * dx + dz * dz > r * r) return;
+      if (!bird && !atShore(p.x, p.z)) return;
     }
     seen.add(id); save(KEY_C, seen);
     const c = CREATURES[id];
     const at = x === undefined ? null : [x, y !== undefined ? y : (world.heightAt ? world.heightAt(x, z) : 0) + 0.2, z];
     discover('creature', `${c[0]} ${c[1]}`, c[2], at, c[1], c[5]);
   }
+  /** He stands at the water's edge: water within CONTACT.shore of (x, z). */
+  function atShore(x, z) {
+    if (!world.surfaceAt) return true;
+    for (let k = 1; k <= 3; k++) {
+      const r = (CONTACT.shore * k) / 3;
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        let s = '';
+        try { s = world.surfaceAt(x + Math.cos(a) * r, z + Math.sin(a) * r); } catch { s = ''; }
+        if (s === 'water') return true;
+      }
+    }
+    return false;
+  }
+  // nothing living goes into the book before he has taken his first step (the opening is for the story)
+  let moved = false;
+  const offMoved = bus.once('input:first', () => { moved = true; });
   // a flock of Taebaek birds flew right over him (life/life.js)
   const offBird = bus.on('life:bird', (e) => { if (e && e.id) sawCreature(e.id, e.x, e.z, e.y); });
   let birdT = 0;
@@ -468,6 +488,6 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     modal: () => ui.isOpen,
     /** Places of the 도감 found so far. */
     found: () => [...found],
-    dispose() { window.removeEventListener('keydown', onKey); offBird(); if (opening) opening.dispose(); ui.dispose(); },
+    dispose() { window.removeEventListener('keydown', onKey); offBird(); offMoved(); if (opening) opening.dispose(); ui.dispose(); },
   };
 }
