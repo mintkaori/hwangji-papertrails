@@ -11,11 +11,10 @@ concurrency:
   group: pages
   cancel-in-progress: false
 jobs:
-  deploy:
+  # build and deploy are separate jobs (as in GitHub's Pages starter): the deploy job only starts once the uploaded
+  # site artifact is registered, so deploy-pages never races the upload ("No artifacts named github-pages")
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,6 +27,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
