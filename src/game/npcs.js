@@ -196,7 +196,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
   const ui = createPaperUI({ sound });
   const narr = ui.slot('hj-narr panel'); const season = ui.slot('hj-season panel'); const badge = ui.slot('hj-badge panel');
   const sky = ui.slot('hj-sky panel'); const story = ui.slot('hj-story panel'); const bubble = ui.slot('hj-bubble panel');
-  const opening = intro ? createIntro({ ui, sfx }) : null;
+  const opening = intro ? createIntro({ ui, sfx, voiceFiles: true }) : null; // recorded voice (public/sounds/intro_N.mp3)
   const ATLAS = './textures/art/atlas.webp'; const ANIMALS = './textures/art/animals.png';
   ui.sheet(ATLAS); ui.sheet(ANIMALS);
   let atlasJ = null; let animalsJ = null;

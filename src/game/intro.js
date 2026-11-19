@@ -1,8 +1,9 @@
 // 황지 페이퍼트레일: the opening story. When the page opens, a short guide to the Taebaek trip rises in at the top
-// centre, line by line, and is read aloud - by recorded voice lines (public/sounds/intro_N.mp3, when voiceFiles is
-// on) or else by the browser's own Korean voice (Web Speech). Browsers only let a page speak after a click or a key,
-// so until then the lines go on by reading time with a small note under them; the first click or key reads the line
-// that is up aloud, and the rest follow with the voice. main.js: ?intro=0 skips it.
+// centre, line by line, and is read aloud - by the recorded voice lines (public/sounds/intro_N.mp3: ElevenLabs TTS,
+// Korean voice 'sena', eleven_multilingual_v2; used when voiceFiles is on) or, if they cannot play, by the browser's
+// own Korean voice (Web Speech). Browsers only let a page speak after a click or a key, so until then the lines go on
+// by reading time with a small note under them; the first click or key reads the line that is up aloud, and the rest
+// follow with the voice. If INTRO changes, record the lines again. main.js: ?intro=0 skips it.
 
 export const INTRO = [
   '안녕! 하늘과 가까운 고원도시, 태백에 온 걸 환영해.',

@@ -2,6 +2,8 @@
 export const assets = {
   tilesUrl: './models/tiles.glb',
   travellerUrl: './models/traveller.glb',
+  /** The hero: 'girl' = the girl in a straw hat (player/girl.js, built in code); 'gltf' = the old traveller.glb. */
+  travellerModel: 'girl',
   /** Per-tile numbers written by the Blender build (flaps, triangles, layers, bridge deck profile). Optional. */
   metaUrl: './models/assets_meta.json',
   /** Texture manifest (key -> { file, colorSpace, repeat, wrap }). Tolerated if absent. */

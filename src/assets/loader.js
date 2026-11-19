@@ -11,6 +11,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CONFIG, TILE_SIZE, PATH_WIDTH, RIVER_WIDTH, FLAP_LAYER_GAP } from '../core/config.js';
 import { MODELS, MODEL_IDS, FALLBACK_MODEL } from '../core/models.js';
 import { buildKitTiles } from '../world/kit.js';
+import { buildGirlTraveller } from '../player/girl.js';
 
 const P = CONFIG.palette;
 
@@ -364,7 +365,18 @@ export async function loadAssets({ materials, renderer, quality } = {}) {
   }
 
   let traveller = null;
-  if (travGltf && travGltf.scene) {
+  // 황지 페이퍼트레일: the hero is the girl in a straw hat, built in code (player/girl.js); traveller.glb stays the fallback
+  if (A.travellerModel === 'girl') {
+    try {
+      traveller = buildGirlTraveller(travMats);
+      let tris = 0; traveller.traverse((o) => { if (o.isMesh) tris += o.geometry.attributes.position.count / 3; });
+      stats.traveller = { model: 'girl', triangles: tris };
+    } catch (err) {
+      warn('girl traveller failed:', err && err.message);
+      traveller = null;
+    }
+  }
+  if (!traveller && travGltf && travGltf.scene) {
     try {
       const node = travGltf.scene.getObjectByName('traveller') || travGltf.scene.children[0];
       node.removeFromParent();

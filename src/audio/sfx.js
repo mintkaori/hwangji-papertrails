@@ -47,7 +47,7 @@ export function createSfx({ audio, base = './sounds/', extra = [] }) {
       const src = ctx.createBufferSource();
       src.buffer = b;
       const g = ctx.createGain();
-      g.gain.value = (GAIN[id] ?? 1) * gain;
+      g.gain.value = (GAIN[id] ?? (id.startsWith('intro_') ? 0.85 : 1)) * gain;
       src.connect(g).connect(audio.output || ctx.destination);
       src.onended = () => { if (playing.get(id) === src) playing.delete(id); };
       src.start();

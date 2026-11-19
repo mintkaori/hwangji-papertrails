@@ -23,6 +23,7 @@ import { createLife } from './life/life.js';
 import { createAnimals } from './life/animals.js';
 import { createGame } from './game/index.js';
 import { createNpcs } from './game/npcs.js';
+import { INTRO } from './game/intro.js';
 import { createWeather } from './game/weather.js';
 import { createFish } from './life/fish.js';
 import { createViews } from './camera/views.js';
@@ -39,6 +40,12 @@ const showIntro = params.get('intro') !== '0';
 
 state.seed = seed;
 state.quality = quality;
+
+// PWA: the service worker (public/sw.js) caches the game so it installs and plays offline (production builds only:
+// in dev it would get in the way of hot reloading)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
 
 async function boot() {
   const canvas = document.getElementById('atlas');
@@ -59,7 +66,8 @@ async function boot() {
   const post = createPost({ renderer, scene, camera: follow.camera, quality });
   const audio = createPaperAudio({ muted });
   const music = createMusic({ audio });
-  const sfx = createSfx({ audio }); // 도감 / talk / season UI sounds (public/sounds)
+  // 도감 / talk / season UI sounds and the opening story's voice lines (public/sounds, made with ElevenLabs)
+  const sfx = createSfx({ audio, extra: INTRO.map((_, i) => 'intro_' + (i + 1)) });
   const daynight = createDayNight({ scene, night: params.get('night') === '1' });
   // ambient life + weather (leaves, snow, rain, birds, chimney smoke, fireflies ...): 2 draw calls; ?life=0 disables it
   const life = params.get('life') === '0' || CONFIG.life.enabled === false ? null : createLife({ scene, assets, wfc, world, daynight, camera: follow.camera, quality, seed });

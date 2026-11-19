@@ -1,0 +1,20 @@
+{
+  "name": "황지 페이퍼트레일",
+  "short_name": "페이퍼트레일",
+  "description": "황지중앙초에서 시작해 태백 끝까지 걸어가는 종이 팝업북 탐험",
+  "lang": "ko",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#1c130d",
+  "theme_color": "#2b1c0e",
+  "categories": ["education", "games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
