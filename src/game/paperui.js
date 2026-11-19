@@ -1,18 +1,31 @@
 // 황지 페이퍼트레일: the words on the screen (DOM only).
-// Every message is bare lettering on a soft dark halo - no cards, no boxes - so the paper world shows through, and the
-// halo keeps it readable on the brightest page. It rises in letter by letter; when it is done the wind takes it: the
-// letters lift and drift off to the right one after another, turning and fading, like paper scraps in a breeze.
-// Also the 도감: a button with the count (top right, B), a little paper card that flies into it when something new is
-// found, and the book itself - every place, festival, legend, creature and friend found so far, with a picture,
-// the short line and the long story.
+// Every message sits on a soft translucent panel (warm dark paper, a little blur), so it stays readable on the brightest
+// page while the paper world still shows through. The letters rise in one by one; when the message is done the wind
+// takes it: the letters lift and drift off to the right one after another, turning and fading, like paper scraps in a
+// breeze, and the panel fades away under them.
+// Also the 도감: a button with the count (bottom centre, B), a little picture card that pops out of the thing that was
+// found and flies into it, and the book itself - every place, festival, legend, creature and friend found so far,
+// with a picture, the short line and the long story.
 
 const FONT = "'Jua', 'BM JUA_TTF', 'BM JUA_OTF', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif";
-const HALO = '0 0 1px rgba(34, 20, 8, 0.95), 0 0 3px rgba(34, 20, 8, 0.9), 0 1px 6px rgba(28, 16, 6, 0.75), 0 0 14px rgba(28, 16, 6, 0.45)';
+const SOFT = '0 1px 2px rgba(20, 12, 4, 0.55)';
+const PANEL = 'rgba(34, 22, 12, 0.66)';
+const PANEL_HOVER = 'rgba(52, 34, 18, 0.8)';
+const RIM = 'inset 0 0 0 1.5px rgba(255, 233, 196, 0.22)';
+const DROP = '0 8px 24px rgba(10, 6, 2, 0.28)';
+const BLUR = '-webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);';
 
 const CSS = `
-.hj-ui { position: fixed; pointer-events: none; user-select: none; z-index: 5; font-family: ${FONT};
-  color: #fffaf0; text-shadow: ${HALO}; visibility: hidden; }
+.hj-ui { position: fixed; pointer-events: none; user-select: none; z-index: 5; font-family: ${FONT}; box-sizing: border-box;
+  color: #fffaf0; text-shadow: ${SOFT}; visibility: hidden; }
 .hj-ui.on { visibility: visible; }
+/* the translucent panel behind a message: it fades in with the letters and drifts off with the wind */
+.hj-ui.panel::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 16px; background: ${PANEL}; ${BLUR}
+  box-shadow: ${DROP}, ${RIM}; opacity: 0; transform: scale(0.97);
+  transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.hj-ui.panel.in::before { opacity: 1; transform: none; }
+.hj-ui.panel.gust::before { opacity: 0; transform: translate(26px, -6px) scale(0.98);
+  transition: opacity 0.8s ease-in 0.12s, transform 1s ease-in 0.1s; }
 .hj-ui .w { display: inline-block; white-space: pre; opacity: 0; transform: translate(-0.12em, 0.42em); filter: blur(3px);
   transition: opacity 0.42s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.42s ease;
   transition-delay: calc(var(--i) * 14ms); }
@@ -21,72 +34,114 @@ const CSS = `
   transition: opacity 0.75s ease-in, transform 1.05s cubic-bezier(0.55, 0, 0.85, 0.55), filter 0.75s ease-in;
   transition-delay: calc(var(--i) * 10ms); }
 .hj-ui .row { display: block; }
+.hj-ui .wd { display: inline-block; white-space: nowrap; }
 .hj-ui .t { color: #ffe39a; }
-.hj-ui .s { color: #f4e4c8; font-size: 0.72em; letter-spacing: 0.06em; }
-.hj-narr { left: 0; right: 0; margin: 0 auto; top: 68vh; width: min(720px, 92vw); text-align: center;
-  font-size: clamp(16px, 2.1vw, 19px); line-height: 1.45; }
-.hj-narr .t { font-size: 1.32em; letter-spacing: 0.04em; }
-.hj-season { left: 0; right: 0; margin: 0 auto; top: 24vh; width: 92vw; text-align: center; }
-.hj-season .t { color: #fffaf0; font-size: clamp(34px, 6vw, 62px); letter-spacing: 0.08em; }
-.hj-season .s { font-size: clamp(16px, 2.2vw, 22px); letter-spacing: 0.14em; }
-.hj-badge { left: 16px; top: 12px; font-size: 15px; letter-spacing: 0.03em; }
-.hj-badge .s { margin-left: 10px; font-size: 0.92em; }
-.hj-sky { left: 16px; top: 38px; font-size: 14px; max-width: min(520px, 70vw); }
-.hj-story { left: 0; right: 0; margin: 0 auto; bottom: 7vh; width: min(680px, 92vw); text-align: center;
-  font-size: clamp(16px, 2vw, 19px); line-height: 1.55; }
-.hj-story .t { font-size: 0.86em; letter-spacing: 0.06em; }
-.hj-story .s { letter-spacing: 0.3em; }
-.hj-bubble { left: 0; top: 0; width: min(300px, 70vw); text-align: center; font-size: 17px; line-height: 1.35; }
-.hj-bubble .t { font-size: 0.8em; letter-spacing: 0.05em; }
-.hj-bubble .s { font-size: 0.66em; }
-.hj-dexbtn { right: 16px; top: 10px; font-size: 16px; pointer-events: auto; cursor: pointer; visibility: visible;
-  padding: 4px 6px; transition: transform 0.25s ease; }
-.hj-dexbtn:hover { transform: scale(1.06); }
-.hj-dexbtn.bump { animation: hjBump 0.6s ease; }
-.hj-dexbtn b { color: #ffe39a; font-weight: normal; margin-left: 6px; }
-@keyframes hjBump { 0% { transform: scale(1); } 30% { transform: scale(1.32) rotate(-4deg); } 60% { transform: scale(0.94) rotate(2deg); } 100% { transform: scale(1); } }
-.hj-fly { position: fixed; left: 0; top: 0; z-index: 7; pointer-events: none; width: 34px; height: 34px; margin: -17px 0 0 -17px;
-  border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;
-  background: radial-gradient(circle, rgba(255, 244, 214, 0.95) 0 55%, rgba(255, 220, 140, 0) 72%); box-shadow: 0 0 18px 6px rgba(255, 220, 140, 0.55); }
+.hj-ui .s { color: #f2dfc0; font-size: 0.72em; letter-spacing: 0.05em; }
+/* the opening story: top centre, the biggest words on the screen */
+.hj-intro { left: 0; right: 0; margin: 0 auto; top: max(64px, 9vh); width: max-content; max-width: min(860px, 92vw);
+  padding: 16px 30px 14px; text-align: center; font-size: clamp(20px, 2.7vw, 28px); line-height: 1.5; }
+.hj-intro::before { border-radius: 20px; }
+.hj-intro .s { margin-top: 8px; font-size: 0.62em; }
+/* a discovery: the name, the short line, where to read more */
+.hj-narr { left: 0; right: 0; margin: 0 auto; top: 57vh; width: max-content; max-width: min(760px, 92vw);
+  padding: 14px 26px 12px; text-align: center; font-size: clamp(18px, 2.3vw, 22px); line-height: 1.5; }
+.hj-narr .t { font-size: 1.3em; letter-spacing: 0.04em; margin-bottom: 2px; }
+.hj-narr .s { margin-top: 6px; }
+.hj-season { left: 0; right: 0; margin: 0 auto; top: 24vh; width: max-content; max-width: 92vw; padding: 14px 40px 16px; text-align: center; }
+.hj-season::before { border-radius: 24px; }
+.hj-season .t { color: #fffaf0; font-size: clamp(36px, 6vw, 64px); letter-spacing: 0.08em; }
+.hj-season .s { font-size: clamp(17px, 2.2vw, 23px); letter-spacing: 0.14em; }
+.hj-badge { left: 14px; top: 12px; padding: 7px 15px 6px; font-size: 17px; letter-spacing: 0.03em; white-space: nowrap; }
+.hj-badge::before, .hj-sky::before { border-radius: 999px; }
+.hj-sky { left: 14px; top: 54px; padding: 7px 15px 6px; font-size: 16px; max-width: min(580px, 84vw); }
+.hj-story { left: 0; right: 0; margin: 0 auto; bottom: 88px; width: max-content; max-width: min(720px, 92vw);
+  padding: 14px 26px 12px; text-align: center; font-size: clamp(18px, 2.2vw, 21px); line-height: 1.6; }
+.hj-story .t { font-size: 0.88em; letter-spacing: 0.06em; }
+.hj-story .s { letter-spacing: 0.3em; margin-top: 4px; }
+/* a mascot talking: a speech bubble with a tail pointing down at it */
+.hj-bubble { left: 0; top: 0; width: max-content; max-width: min(340px, 74vw); padding: 10px 17px 9px; text-align: center;
+  font-size: 19px; line-height: 1.4; }
+.hj-bubble::before { border-radius: 14px; }
+.hj-bubble::after { content: ''; position: absolute; left: 50%; bottom: -10px; margin-left: -10px; width: 0; height: 0;
+  border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 10px solid ${PANEL};
+  opacity: 0; transition: opacity 0.35s ease; }
+.hj-bubble.in::after { opacity: 1; }
+.hj-bubble.gust::after { opacity: 0; transition: opacity 0.6s ease-in; }
+.hj-bubble .t { font-size: 0.82em; letter-spacing: 0.05em; }
+.hj-bubble .s { font-size: 0.68em; margin-top: 3px; }
+/* the 도감 button, bottom centre */
+.hj-dexbtn { left: 0; right: 0; bottom: 16px; margin: 0 auto; width: max-content; display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px 8px; border-radius: 999px; font-size: 19px; pointer-events: auto; cursor: pointer; visibility: visible;
+  background: ${PANEL}; ${BLUR} box-shadow: ${DROP}, inset 0 0 0 1.5px rgba(255, 227, 154, 0.45);
+  transition: transform 0.25s ease, box-shadow 0.3s ease, background 0.25s ease; }
+.hj-dexbtn:hover { transform: translateY(-2px) scale(1.04); background: ${PANEL_HOVER}; box-shadow: ${DROP}, inset 0 0 0 2px rgba(255, 227, 154, 0.85); }
+.hj-dexbtn b { color: #ffe39a; font-weight: normal; }
+.hj-dexbtn kbd { font: inherit; font-size: 0.7em; line-height: 1.3; color: #2b1c0e; background: #ffe39a; border-radius: 6px; padding: 1px 7px 0; text-shadow: none; }
+.hj-dexbtn.glow { box-shadow: ${DROP}, inset 0 0 0 2px rgba(255, 227, 154, 0.95), 0 0 26px 6px rgba(255, 214, 120, 0.55); }
+.hj-dexbtn.bump { animation: hjBump 0.7s ease; }
+@keyframes hjBump { 0% { transform: scale(1); } 30% { transform: scale(1.22) rotate(-3deg); } 60% { transform: scale(0.96) rotate(1.5deg); } 100% { transform: scale(1); } }
+/* the card that pops out of a new find and flies into the book */
+.hj-fly { position: fixed; left: 0; top: 0; z-index: 7; pointer-events: none; width: 96px; margin: -50px 0 0 -48px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 6px; border-radius: 14px;
+  background: rgba(255, 249, 236, 0.97); color: #3a2614; font-family: ${FONT}; text-align: center; will-change: transform, opacity;
+  box-shadow: 0 0 0 2px rgba(255, 214, 120, 0.95), 0 0 26px 8px rgba(255, 220, 140, 0.6), 0 8px 18px rgba(0, 0, 0, 0.3); }
+.hj-fly .frame { display: flex; align-items: center; justify-content: center; font-size: 40px; line-height: 1; }
+.hj-fly .pic { background-repeat: no-repeat; flex: none; }
+.hj-fly .nm { font-size: 14px; line-height: 1.15; max-width: 86px; word-break: keep-all; }
+/* the book */
 .hj-dex { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; pointer-events: auto;
-  background: rgba(16, 10, 4, 0.6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); font-family: ${FONT};
-  color: #fffaf0; text-shadow: ${HALO}; cursor: default; }
-.hj-dex.open { display: flex; animation: hjFade 0.35s ease; }
+  background: rgba(14, 9, 4, 0.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); font-family: ${FONT};
+  color: #fffaf0; cursor: default; }
+.hj-dex.open { display: flex; animation: hjFade 0.3s ease; }
 @keyframes hjFade { from { opacity: 0; } to { opacity: 1; } }
-.hj-dex .book { width: min(1000px, 95vw); height: min(660px, 90vh); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  grid-template-rows: auto auto minmax(0, 1fr); gap: 10px 22px; }
-.hj-dex .head { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 14px; }
-.hj-dex .head h2 { margin: 0; font-weight: normal; font-size: 30px; color: #ffe39a; letter-spacing: 0.06em; }
-.hj-dex .head span { font-size: 15px; color: #f4e4c8; }
-.hj-dex .head .x { margin-left: auto; font-size: 15px; color: #f4e4c8; cursor: pointer; padding: 4px 8px; }
-.hj-dex .tabs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 18px; }
-.hj-dex .tabs button { font: inherit; font-size: 17px; color: #e9dcc4; background: none; border: none; padding: 2px 0 4px; cursor: pointer;
-  text-shadow: ${HALO}; border-bottom: 2px solid transparent; }
-.hj-dex .tabs button.on { color: #ffe39a; border-bottom-color: rgba(255, 227, 154, 0.8); }
-.hj-dex .list { overflow-y: auto; padding-right: 6px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+.hj-dex .book { width: min(1040px, 95vw); height: min(700px, 90vh); box-sizing: border-box; padding: 22px 26px 20px; border-radius: 22px;
+  background: rgba(38, 25, 14, 0.94); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 0 0 1.5px rgba(255, 227, 154, 0.35);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto auto minmax(0, 1fr); gap: 14px 24px;
+  animation: hjBookIn 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes hjBookIn { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+.hj-dex .head { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+.hj-dex .head h2 { margin: 0; font-weight: normal; font-size: 32px; color: #ffe39a; letter-spacing: 0.06em; }
+.hj-dex .head .prog { font-size: 18px; color: #f2dfc0; }
+.hj-dex .head .x { margin-left: auto; font-size: 17px; color: #2b1c0e; background: #ffe39a; border-radius: 999px; padding: 7px 16px 6px; cursor: pointer; }
+.hj-dex .head .x:hover { background: #fff0c2; }
+.hj-dex .tabs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 10px; }
+.hj-dex .tabs button { font: inherit; font-size: 19px; color: #f0e3cb; background: rgba(255, 245, 225, 0.07); cursor: pointer;
+  border: 1.5px solid rgba(255, 240, 210, 0.18); border-radius: 999px; padding: 6px 16px 5px; }
+.hj-dex .tabs button:hover { border-color: rgba(255, 227, 154, 0.7); }
+.hj-dex .tabs button.on { color: #2b1c0e; background: #ffe39a; border-color: #ffe39a; }
+.hj-dex .list { overflow-y: auto; padding-right: 6px; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px;
   align-content: start; scrollbar-width: thin; }
-.hj-dex .item { display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 10px; cursor: pointer; font-size: 15px;
-  border: 1.5px solid rgba(255, 240, 210, 0.16); background: rgba(255, 245, 225, 0.05); }
-.hj-dex .item:hover, .hj-dex .item.sel { border-color: rgba(255, 227, 154, 0.75); background: rgba(255, 245, 225, 0.12); }
-.hj-dex .item.unknown { color: #a99a84; cursor: default; }
-.hj-dex .item .pic { width: 40px; height: 40px; flex: none; }
-.hj-dex .pic { background-repeat: no-repeat; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
+.hj-dex .item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; cursor: pointer; font-size: 17px; line-height: 1.25;
+  border: 1.5px solid rgba(255, 240, 210, 0.14); background: rgba(255, 245, 225, 0.06); }
+.hj-dex .item:hover, .hj-dex .item.sel { border-color: rgba(255, 227, 154, 0.85); background: rgba(255, 245, 225, 0.14); }
+.hj-dex .item.unknown { color: #b3a48d; cursor: default; }
+.hj-dex .item.unknown:hover { border-color: rgba(255, 240, 210, 0.14); background: rgba(255, 245, 225, 0.06); }
+.hj-dex .frame { display: flex; align-items: center; justify-content: center; flex: none; }
+.hj-dex .pic { background-repeat: no-repeat; flex: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
 .hj-dex .item.unknown .pic { filter: brightness(0) opacity(0.35); }
-.hj-dex .detail { overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 8px; }
-.hj-dex .detail .pic { width: min(300px, 70%); height: 200px; margin: 6px 0 10px; }
-.hj-dex .detail h3 { margin: 0; font-weight: normal; font-size: 28px; color: #ffe39a; letter-spacing: 0.04em; }
-.hj-dex .detail .short { margin: 6px 0 12px; font-size: 18px; color: #fff3da; }
-.hj-dex .detail p { margin: 0 0 10px; font-size: 17px; line-height: 1.65; max-width: 460px; }
-.hj-dex .detail .where { font-size: 14px; color: #f4e4c8; letter-spacing: 0.04em; }
+.hj-dex .detail { overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 14px 18px;
+  border-radius: 16px; background: rgba(255, 245, 225, 0.05); }
+.hj-dex .detail .frame { margin: 4px 0 12px; }
+.hj-dex .detail h3 { margin: 0; font-weight: normal; font-size: 30px; color: #ffe39a; letter-spacing: 0.04em; }
+.hj-dex .detail .short { margin: 8px 0 14px; font-size: 20px; color: #fff3da; }
+.hj-dex .detail p { margin: 0 0 12px; font-size: 19px; line-height: 1.75; max-width: 520px; color: #fdf4e3; }
+.hj-dex .detail .where { margin-top: 4px; font-size: 17px; color: #ffe39a; letter-spacing: 0.03em; background: rgba(255, 227, 154, 0.1);
+  padding: 6px 14px 5px; border-radius: 999px; }
 @media (max-width: 720px) {
-  .hj-dex .book { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(0, 0.9fr) minmax(0, 1.1fr); height: 92vh; }
-  .hj-dex .detail .pic { height: 120px; }
+  .hj-dex .book { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(0, 0.9fr) minmax(0, 1.1fr); height: 92vh; padding: 16px; }
+  .hj-dex .head h2 { font-size: 26px; }
+  .hj-dex .detail p { font-size: 17px; }
+  .hj-badge { font-size: 15px; }
+  .hj-dexbtn { font-size: 17px; padding: 8px 16px 7px; }
 }
 `;
 
 function div(cls) { const d = document.createElement('div'); d.className = cls; return d; }
 
-/** Fill `el` with rows of single-letter spans (each with its own wind path). rows: [{ text, cls }] (cls 't' title, 's' small). */
+/**
+ * Fill `el` with rows of single-letter spans (each with its own wind path). rows: [{ text, cls }] (cls 't' title,
+ * 's' small). The letters of a word are held together, so a long line wraps between words, never inside one.
+ */
 function letterize(el, rows) {
   el.innerHTML = '';
   let i = 0;
@@ -94,31 +149,39 @@ function letterize(el, rows) {
     if (!r || !r.text) continue;
     const row = document.createElement('span');
     row.className = 'row' + (r.cls ? ' ' + r.cls : '');
-    for (const ch of String(r.text)) {
-      const w = document.createElement('span');
-      w.className = 'w';
-      w.textContent = ch;
-      // the wind blows from the west: every letter drifts right and up, turning a little, a bit differently each
-      const k = Math.random();
-      w.style.setProperty('--i', String(i));
-      w.style.setProperty('--dx', (60 + 90 * k + i * 0.6).toFixed(0) + 'px');
-      w.style.setProperty('--dy', (-14 - 46 * Math.random()).toFixed(0) + 'px');
-      w.style.setProperty('--r', (14 + 50 * Math.random() * (Math.random() < 0.5 ? -1 : 1)).toFixed(0) + 'deg');
-      row.appendChild(w);
-      i++;
+    for (const tok of String(r.text).match(/\s+|\S+/g) || []) {
+      const space = /^\s/.test(tok);
+      const host = space ? row : row.appendChild(Object.assign(document.createElement('span'), { className: 'wd' }));
+      for (const ch of tok) {
+        const w = document.createElement('span');
+        w.className = 'w';
+        w.textContent = ch;
+        // the wind blows from the west: every letter drifts right and up, turning a little, a bit differently each
+        const k = Math.random();
+        w.style.setProperty('--i', String(i));
+        w.style.setProperty('--dx', (60 + 90 * k + i * 0.6).toFixed(0) + 'px');
+        w.style.setProperty('--dy', (-14 - 46 * Math.random()).toFixed(0) + 'px');
+        w.style.setProperty('--r', (14 + 50 * Math.random() * (Math.random() < 0.5 ? -1 : 1)).toFixed(0) + 'deg');
+        host.appendChild(w);
+        i++;
+      }
     }
     el.appendChild(row);
   }
   return i;
 }
 
-export function createPaperUI() {
+/** sound(id): play a UI sound ('discover', 'collect', 'open', 'close', 'page'); a no-op by default. */
+export function createPaperUI({ sound = () => {} } = {}) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
   const made = [];
 
-  /** A message slot: show(rows, hold) letters it in (and blows it away after `hold` s when hold > 0); gust() blows it now. */
+  /**
+   * A message slot (cls: its class names; add 'panel' for the translucent panel): show(rows, hold) letters it in (and
+   * blows it away after `hold` s when hold > 0); gust() blows it now.
+   */
   function slot(cls) {
     const el = div('hj-ui ' + cls);
     document.body.appendChild(el);
@@ -150,28 +213,78 @@ export function createPaperUI() {
     };
   }
 
+  // ---- the book's pictures (cut from sprite sheets with CSS) ---------------------------------------------------------
+  const sheets = {}; // image src -> [w, h]
+  /**
+   * Make `el` show exactly the sprite pic.rect, scaled to fit boxW x boxH: el takes the sprite's scaled size (so no
+   * neighbouring art of the sheet shows); its parent (a .frame of the box size) centres it. False when not loaded.
+   */
+  function picStyle(el, pic, boxW, boxH) {
+    if (!pic || !pic.src || !pic.rect || !sheets[pic.src]) { el.style.backgroundImage = 'none'; el.style.width = el.style.height = '0px'; return false; }
+    const [x, y, w, h] = pic.rect; const [W, H] = sheets[pic.src];
+    const s = Math.min(boxW / w, boxH / h);
+    el.style.width = (w * s).toFixed(1) + 'px';
+    el.style.height = (h * s).toFixed(1) + 'px';
+    el.style.backgroundImage = `url("${pic.src}")`;
+    el.style.backgroundSize = `${(W * s).toFixed(1)}px ${(H * s).toFixed(1)}px`;
+    el.style.backgroundPosition = `${(-x * s).toFixed(1)}px ${(-y * s).toFixed(1)}px`;
+    return true;
+  }
+  /** A box of boxW x boxH with the sprite centred in it. */
+  function framed(pic, boxW, boxH) {
+    const frame = div('frame');
+    frame.style.width = boxW + 'px'; frame.style.height = boxH + 'px';
+    const p = div('pic');
+    frame.appendChild(p);
+    const ok = picStyle(p, pic, boxW, boxH);
+    return { frame, ok };
+  }
+
   // ---- the 도감 button and the flying card --------------------------------------------------------------------------
   const btn = div('hj-ui hj-dexbtn');
-  btn.innerHTML = '📖 도감<b>0</b>';
+  btn.innerHTML = '<span>📖 도감</span><b>0</b><kbd>B</kbd>';
+  btn.title = '도감 열기 (B)';
   document.body.appendChild(btn);
   made.push(btn);
   function setCount(n, total) { btn.querySelector('b').textContent = `${n} / ${total}`; }
   function bump() { btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump'); }
-  /** A little glowing card with `icon` flies from screen (x, y) into the 도감 button. */
-  function flyToDex(x, y, icon) {
-    const r = btn.getBoundingClientRect();
-    const tx = r.left + r.width * 0.3; const ty = r.top + r.height * 0.5;
+  let flying = 0;
+  /**
+   * A new find: a picture card pops out of screen point (x, y) - where the thing is - and rises, waits a moment so it
+   * can be seen, then swoops into the 도감 button. card: { name, icon, pic }; onLand() runs when it is in the book.
+   */
+  function flyToDex(x, y, card = {}, onLand = null) {
     const f = div('hj-fly');
-    f.textContent = icon || '✨';
+    const { frame, ok } = framed(card.pic, 80, 64);
+    if (!ok) frame.textContent = card.icon || '✨';
+    const nm = div('nm');
+    nm.textContent = card.name || '';
+    f.append(frame, nm);
     document.body.appendChild(f);
-    const mx = (x + tx) / 2 + (tx - x) * 0.1; const my = Math.min(y, ty) - 120; // a lifting arc, the way a scrap rides the wind
+    const W = window.innerWidth; const H = window.innerHeight;
+    const sx = Math.min(W - 56, Math.max(56, x)); const sy = Math.min(H - 140, Math.max(120, y)); // keep the card on screen
+    const r = btn.getBoundingClientRect();
+    const tx = r.left + r.width / 2; const ty = r.top + r.height / 2;
+    const up = sy - 64; // it rises out of the thing that was found ...
+    const mx = (sx + tx) / 2 + (sx < tx ? -1 : 1) * Math.min(140, Math.abs(tx - sx) * 0.3); const my = Math.min(up, ty) - 60; // ... and arcs into the book
+    flying++;
+    btn.classList.add('glow');
+    sound('discover');
     const a = f.animate([
-      { transform: `translate(${x}px, ${y}px) scale(0.4)`, opacity: 0 },
-      { transform: `translate(${x}px, ${y - 30}px) scale(1.15)`, opacity: 1, offset: 0.18 },
-      { transform: `translate(${mx}px, ${my}px) scale(1) rotate(-25deg)`, opacity: 1, offset: 0.6 },
-      { transform: `translate(${tx}px, ${ty}px) scale(0.45) rotate(10deg)`, opacity: 0.9 },
-    ], { duration: 1150, easing: 'cubic-bezier(0.45, 0, 0.3, 1)' });
-    a.onfinish = () => { f.remove(); bump(); };
+      { transform: `translate(${sx}px, ${sy}px) scale(0.2)`, opacity: 0, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.25)' },
+      { transform: `translate(${sx}px, ${up}px) scale(1.08)`, opacity: 1, offset: 0.16, easing: 'ease-out' },
+      { transform: `translate(${sx}px, ${up}px) scale(1)`, opacity: 1, offset: 0.24, easing: 'ease-in-out' },
+      { transform: `translate(${sx}px, ${up - 8}px) scale(1)`, opacity: 1, offset: 0.5, easing: 'cubic-bezier(0.45, 0, 0.6, 1)' }, // a moment to see it
+      { transform: `translate(${mx}px, ${my}px) scale(0.8) rotate(-8deg)`, opacity: 1, offset: 0.76, easing: 'cubic-bezier(0.4, 0, 0.7, 1)' },
+      { transform: `translate(${tx}px, ${ty}px) scale(0.26) rotate(6deg)`, opacity: 0.8 },
+    ], { duration: 2700, fill: 'forwards' });
+    a.onfinish = () => {
+      f.remove();
+      if (--flying <= 0) { flying = 0; btn.classList.remove('glow'); }
+      bump();
+      sound('collect');
+      if (onLand) onLand();
+    };
   }
 
   // ---- the book ------------------------------------------------------------------------------------------------------
@@ -182,25 +295,13 @@ export function createPaperUI() {
   made.push(dex);
   let book = null; // { tabs: [{ id, name, entries: [{ id, name, icon, short, detail, where, pic, known }] }], total, found }
   let tab = 0; let sel = null; let isOpen = false;
-  const sheets = {}; // image src -> [w, h]
-  function picStyle(el, pic, boxW, boxH) {
-    if (!pic || !pic.src || !pic.rect || !sheets[pic.src]) { el.style.backgroundImage = 'none'; return; }
-    const [x, y, w, h] = pic.rect; const [W, H] = sheets[pic.src];
-    const s = Math.min(boxW / w, boxH / h);
-    el.style.backgroundImage = `url("${pic.src}")`;
-    el.style.backgroundSize = `${(W * s).toFixed(1)}px ${(H * s).toFixed(1)}px`;
-    el.style.backgroundPosition = `${(-x * s + (boxW - w * s) / 2).toFixed(1)}px ${(-y * s + (boxH - h * s) / 2).toFixed(1)}px`;
-  }
   function renderDetail() {
     const d = dex.querySelector('.detail');
     d.innerHTML = '';
     const e = sel;
-    if (!e) { d.innerHTML = '<p class="where">왼쪽에서 하나를 골라 보세요.</p>'; return; }
-    const pic = div('pic');
-    d.appendChild(pic);
-    const box = { w: Math.min(300, d.clientWidth * 0.7 || 300), h: window.innerWidth <= 720 ? 120 : 200 };
-    pic.style.width = box.w + 'px'; pic.style.height = box.h + 'px';
-    picStyle(pic, e.pic, box.w, box.h);
+    if (!e) { d.innerHTML = '<p class="where">아직 찾은 것이 없어요. 가까이 다가가 보세요!</p>'; return; }
+    const box = { w: Math.round(Math.min(320, d.clientWidth * 0.7 || 320)), h: window.innerWidth <= 720 ? 120 : 210 };
+    d.appendChild(framed(e.pic, box.w, box.h).frame);
     const h = document.createElement('h3'); h.textContent = `${e.icon || ''} ${e.name}`;
     const sh = div('short'); sh.textContent = e.short || '';
     d.append(h, sh);
@@ -217,7 +318,7 @@ export function createPaperUI() {
       const n = t.entries.filter((e) => e.known).length;
       b.textContent = `${t.name} ${n}/${t.entries.length}`;
       if (i === tab) b.className = 'on';
-      b.onclick = () => { tab = i; sel = book.tabs[tab].entries.find((e) => e.known) || null; render(); };
+      b.onclick = () => { if (tab !== i) sound('page'); tab = i; sel = book.tabs[tab].entries.find((e) => e.known) || null; render(); };
       tabs.appendChild(b);
     });
     const list = dex.querySelector('.list');
@@ -225,12 +326,10 @@ export function createPaperUI() {
     const t = book.tabs[tab];
     for (const e of t.entries) {
       const it = div('item' + (e.known ? '' : ' unknown') + (sel && sel.id === e.id ? ' sel' : ''));
-      const pic = div('pic');
-      picStyle(pic, e.pic, 40, 40);
       const name = document.createElement('span');
       name.textContent = e.known ? e.name : '???';
-      it.append(pic, name);
-      if (e.known) it.onclick = () => { sel = e; render(); };
+      it.append(framed(e.pic, 48, 48).frame, name);
+      if (e.known) it.onclick = () => { if (sel !== e) sound('page'); sel = e; render(); };
       list.appendChild(it);
     }
     renderDetail();
@@ -238,11 +337,12 @@ export function createPaperUI() {
   function open(b) {
     book = b;
     if (!sel || !book.tabs[tab].entries.some((e) => e.id === sel.id && e.known)) sel = book.tabs[tab].entries.find((e) => e.known) || null;
+    if (!isOpen) sound('open');
     isOpen = true;
     dex.classList.add('open');
     render();
   }
-  function close() { isOpen = false; dex.classList.remove('open'); }
+  function close() { if (isOpen) sound('close'); isOpen = false; dex.classList.remove('open'); }
   dex.addEventListener('pointerdown', (e) => { if (e.target === dex || e.target.classList.contains('x')) close(); });
 
   /** Preload a sprite sheet's size so pictures can be cut from it with CSS. */

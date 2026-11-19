@@ -1,18 +1,21 @@
 // 황지 페이퍼트레일: the talking, story and 도감 layer (DOM only - nothing is drawn into the scene). Every word on the
-// screen is bare lettering that rises in and is blown away by the wind (game/paperui.js).
+// screen rises in on a soft translucent panel and is blown away by the wind (game/paperui.js).
+//  * Opening story (game/intro.js): a short spoken guide to the trip at the top centre when the page opens.
 //  * Mascots (life/animals.js species npc_*): walk up to one and it waves (animals.js) and its words rise above it:
 //    what it says about the place it stands in; Space hears more (the place, the weather, the season, itself).
 //  * Season title: entering a new season ring shows its name; the corner line keeps season, place and weather.
 //  * Weather (game/weather.js): a short line when the sky changes.
 //  * Legend trails (lg_* tiles): walking the road through one tells the tale scene by scene.
-//  * 도감 (B or the button, top right): the first visit of a place, festival or legend, the first sight of a fish or a
-//    bird and the first talk with a friend fly a card into the book and leave a line of narration; the book keeps the
-//    picture, the short line and the long story of each. Kept per seed in localStorage (when it is available).
+//  * 도감 (B or the button, bottom centre): coming close to a place, festival or legend, a fish leaping or a bird
+//    near him, a flock passing right overhead and walking up to a friend (CONTACT) the first time pops a picture card
+//    out of it that flies into the book, and leaves a line of narration; the book keeps the picture, the short line
+//    and the long story of each. Kept per seed in localStorage (when it is available).
 import * as THREE from 'three';
 import { TILE_SIZE } from '../core/config.js';
 import { biomeInfo, SEASON_OF, PLACE_OF } from '../core/biomes.js';
 import { bus } from '../core/events.js';
 import { createPaperUI } from './paperui.js';
+import { createIntro } from './intro.js';
 
 // ---- the mascots ----------------------------------------------------------------------------------------------------
 export const MASCOTS = {
@@ -178,12 +181,22 @@ const FRIEND_WHERE = {
 };
 const SEASON_ICON = { heartland: '🌸', snow: '❄️', blossom: '🌸', desert: '☀️', pinewood: '🍁' };
 const KIND_ICON = { place: '📖', festival: '🎉', legend: '📜', creature: '🐾', friend: '🧸' };
+/** How close he must come before something goes into the 도감 (world units; a tile is TILE_SIZE = 2 across). */
+const CONTACT = {
+  place: 0.6, // to the middle of the place's tile - or, where a building fills it, as close as the ground lets him ...
+  slack: 0.35, // ... plus this much
+  bird: 1.1, // a bird sitting on the ground or on the water
+  fish: 1.9, // a fish leap (leaps happen 1.1 - 4.7 from him, game/fish.js)
+  friend: 0.85, // a mascot (it starts talking a little further out, at NEAR)
+};
 
-export function createNpcs({ animals, world, traveller, camera, weather = null, seed = 0 }) {
-  if (typeof document === 'undefined') return { update() {}, sawCreature() {}, modal: () => false, dispose() {} };
-  const ui = createPaperUI();
-  const narr = ui.slot('hj-narr'); const season = ui.slot('hj-season'); const badge = ui.slot('hj-badge');
-  const sky = ui.slot('hj-sky'); const story = ui.slot('hj-story'); const bubble = ui.slot('hj-bubble');
+export function createNpcs({ animals, world, traveller, camera, weather = null, seed = 0, sfx = null, intro = true }) {
+  if (typeof document === 'undefined') return { update() {}, sawCreature() {}, startIntro() {}, modal: () => false, dispose() {} };
+  const sound = (id, gain) => (sfx ? sfx.play(id, gain) : 0);
+  const ui = createPaperUI({ sound });
+  const narr = ui.slot('hj-narr panel'); const season = ui.slot('hj-season panel'); const badge = ui.slot('hj-badge panel');
+  const sky = ui.slot('hj-sky panel'); const story = ui.slot('hj-story panel'); const bubble = ui.slot('hj-bubble panel');
+  const opening = intro ? createIntro({ ui, sfx }) : null;
   const ATLAS = './textures/art/atlas.webp'; const ANIMALS = './textures/art/animals.png';
   ui.sheet(ATLAS); ui.sheet(ANIMALS);
   let atlasJ = null; let animalsJ = null;
@@ -218,10 +231,10 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     if (_p.z > 1 || Math.abs(_p.x) > 1.2 || Math.abs(_p.y) > 1.2) return [window.innerWidth / 2, window.innerHeight * 0.45];
     return [(_p.x * 0.5 + 0.5) * window.innerWidth, (-_p.y * 0.5 + 0.5) * window.innerHeight];
   }
-  function discover(kind, title, line, at) {
+  /** A first find: its card (name, picture sprite) pops out of world point `at` and flies into the book. */
+  function discover(kind, title, line, at, name, pic) {
     const [sx, sy] = at ? screenOf(at[0], at[1], at[2]) : [window.innerWidth / 2, window.innerHeight * 0.3];
-    ui.flyToDex(sx, sy, KIND_ICON[kind]);
-    ui.setCount(count(), TOTAL);
+    ui.flyToDex(sx, sy, { name, icon: KIND_ICON[kind], pic: picOf(pic) }, () => ui.setCount(count(), TOTAL));
     queue.push([title, line]);
   }
   function narrate(dt) {
@@ -230,13 +243,29 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     if (!queue.length) return;
     const [title, line] = queue.shift();
     narr.show([{ text: title, cls: 't' }, { text: line }, { text: '도감에 담았어요 · B로 자세히 보기', cls: 's' }]);
-    busy = 4.6;
+    busy = 5.2;
   }
 
   // ---- places, seasons, legends ------------------------------------------------------------------------------------
   let lastCell = ''; let cellModel = ''; let cellZ = 0;
   let ring = ''; let badgeText = ''; let badgeT = 0;
   let legend = null; let legendEntry = 0; let legendScene = -1; let storyT = 0;
+  let near = null; // the 도감 place of the tile he is in, until he has come close to it: { id, x, z, reach }
+  /** How close to the middle of tile (cx, cz) he must come: as close as the ground allows (a building may stand there). */
+  function reachOf(cx, cz, p) {
+    const x0 = cx * TILE_SIZE; const z0 = cz * TILE_SIZE; const step = TILE_SIZE / 20;
+    let best = Math.hypot(p.x - x0, p.z - z0); // where he stands is open ground
+    for (let i = -10; i <= 10; i++) {
+      for (let j = -10; j <= 10; j++) {
+        const d = Math.hypot(i * step, j * step);
+        if (d >= best) continue;
+        let ok = false;
+        try { ok = world.isWalkable(x0 + i * step, z0 + j * step); } catch { ok = false; }
+        if (ok) best = d;
+      }
+    }
+    return Math.max(CONTACT.place, best + CONTACT.slack);
+  }
   function place() {
     const p = traveller.position;
     const cx = Math.round(p.x / TILE_SIZE); const cz = Math.round(p.z / TILE_SIZE);
@@ -248,15 +277,26 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
       cellModel = (cell && cell.model) || '';
       cellZ = cz * TILE_SIZE;
       const id = ALIAS[cellModel] || cellModel;
-      if (PLACES[id] && !found.has(id)) {
-        found.add(id); save(KEY, found);
-        const kind = FESTIVALS[id] ? 'festival' : LEGEND_DEX[id] ? 'legend' : 'place';
-        discover(kind, `${KIND_ICON[kind]} ${PLACES[id][0]}`, PLACES[id][1], [cx * TILE_SIZE, (world.heightAt ? world.heightAt(cx * TILE_SIZE, cz * TILE_SIZE) : 0) + 0.5, cz * TILE_SIZE]);
-      }
+      near = PLACES[id] && !found.has(id) ? { id, x: cx * TILE_SIZE, z: cz * TILE_SIZE, reach: reachOf(cx, cz, p) } : null;
       // a legend trail: remember which end he came in by (the road runs north-south)
       if (LEGENDS[cellModel]) {
         if (!legend || legend.id !== cellModel) { legend = { id: cellModel, ...LEGENDS[cellModel] }; legendEntry = p.z > cellZ ? 1 : -1; legendScene = -1; }
       } else if (legend) { legend = null; story.gust(); }
+    }
+    // a 도감 place goes into the book once he has come close to it, not as soon as he steps onto its tile
+    if (near) {
+      const dx = p.x - near.x; const dz = p.z - near.z;
+      if (dx * dx + dz * dz <= near.reach * near.reach) {
+        const id = near.id;
+        near = null;
+        if (!found.has(id)) {
+          found.add(id); save(KEY, found);
+          const kind = FESTIVALS[id] ? 'festival' : LEGEND_DEX[id] ? 'legend' : 'place';
+          const pic = LEGEND_DEX[id] ? LEGEND_DEX[id][2] : PLACES[id][3];
+          const hx = (cx * TILE_SIZE + p.x) / 2; const hz = (cz * TILE_SIZE + p.z) / 2; // between him and the middle of the place
+          discover(kind, `${KIND_ICON[kind]} ${PLACES[id][0]}`, PLACES[id][1], [hx, (world.heightAt ? world.heightAt(hx, hz) : 0) + 0.55, hz], PLACES[id][0], pic);
+        }
+      }
     }
     if (legend) {
       // progress 0..1 along the road from the end he entered by; four scenes in order whichever way he walks
@@ -278,7 +318,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     if (info.id !== ring && (info.edge > 1.2 || ring === '')) {
       const first = ring === '';
       ring = info.id;
-      if (!first) season.show([{ text: `${SEASON_ICON[ring] || ''} ${SEASON_OF[ring]}`, cls: 't' }, { text: PLACE_OF[ring], cls: 's' }], 3.4);
+      if (!first) { season.show([{ text: `${SEASON_ICON[ring] || ''} ${SEASON_OF[ring]}`, cls: 't' }, { text: PLACE_OF[ring], cls: 's' }], 3.4); sound('season'); }
     }
   }
   function storyTick(dt) {
@@ -287,6 +327,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     storyT -= dt;
     if (storyT > 0 || !legend) return;
     story.show([{ text: '📜 ' + legend.title, cls: 't' }, { text: legend.scenes[legendScene] }, { text: '●'.repeat(legendScene + 1) + '○'.repeat(3 - legendScene), cls: 's' }]);
+    sound('page', 0.8);
   }
 
   // ---- weather -------------------------------------------------------------------------------------------------------
@@ -317,6 +358,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     if (!m) return;
     const lines = linesFor(talking, talkModel);
     bubble.show([{ text: m.name, cls: 't' }, { text: lines[line % lines.length] }, { text: 'Space 더 이야기하기', cls: 's' }]);
+    sound('talk');
   }
   function onKey(e) {
     if (e.code === 'KeyB' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); toggleBook(); return; }
@@ -343,10 +385,11 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
       try { cell = world.tileAt(Math.round(hit.x / TILE_SIZE), Math.round(hit.z / TILE_SIZE)); } catch { cell = null; }
       talkModel = (cell && cell.model) || '';
       say();
-      if (MASCOTS[talking] && !met.has(talking)) {
-        met.add(talking); save(KEY_F, met);
-        discover('friend', `🧸 친구 ${MASCOTS[talking].name}`, MASCOTS[talking].self[0], [hit.x, hit.y + 0.4, hit.z]);
-      }
+    }
+    // a new friend goes into the 도감 once he has walked right up to it
+    if (MASCOTS[talking] && !met.has(talking) && hit.id === talking && hit.d <= CONTACT.friend) {
+      met.add(talking); save(KEY_F, met);
+      discover('friend', `🧸 친구 ${MASCOTS[talking].name}`, MASCOTS[talking].self[0], [hit.x, hit.y + 0.4, hit.z], MASCOTS[talking].name, 'a:' + talking);
     }
     _p.set(hit.x, hit.y + 0.7, hit.z).project(camera);
     if (_p.z > 1) return;
@@ -354,29 +397,39 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     const sy = (-_p.y * 0.5 + 0.5) * window.innerHeight;
     const k = bx < 0 ? 1 : Math.min(1, dt * 10);
     bx = bx < 0 ? sx : bx + (sx - bx) * k; by = by < 0 ? sy : by + (sy - by) * k;
-    bubble.el.style.transform = `translate(${bx.toFixed(1)}px, ${by.toFixed(1)}px) translate(-50%, -100%)`;
+    // the bubble's tail (10 px under the panel) points at the spot above its head
+    bubble.el.style.transform = `translate(${bx.toFixed(1)}px, ${by.toFixed(1)}px) translate(-50%, calc(-100% - 12px))`;
   }
 
   // ---- creatures (fish leaps and flocks report themselves; perched birds are looked for around him now and then) ------
-  function sawCreature(id, x, z) {
+  /**
+   * A fish or bird was seen at (x, z). On the ground or in the water it counts only close to him (CONTACT); a flock
+   * passes with its height `y` (life/life.js already only reports flocks that pass right overhead).
+   */
+  function sawCreature(id, x, z, y) {
     if (!CREATURES[id] || seen.has(id)) return;
+    if (x !== undefined && y === undefined) {
+      const p = traveller.position; const dx = x - p.x; const dz = z - p.z;
+      const r = id.startsWith('bird_') ? CONTACT.bird : CONTACT.fish;
+      if (dx * dx + dz * dz > r * r) return;
+    }
     seen.add(id); save(KEY_C, seen);
     const c = CREATURES[id];
-    const at = x === undefined ? null : [x, (world.heightAt ? world.heightAt(x, z) : 0) + 0.2, z];
-    discover('creature', `${c[0]} ${c[1]}`, c[2], at);
+    const at = x === undefined ? null : [x, y !== undefined ? y : (world.heightAt ? world.heightAt(x, z) : 0) + 0.2, z];
+    discover('creature', `${c[0]} ${c[1]}`, c[2], at, c[1], c[5]);
   }
-  // a flock of Taebaek birds flew over (life/life.js)
-  const offBird = bus.on('life:bird', (e) => { if (e && e.id) sawCreature(e.id); });
+  // a flock of Taebaek birds flew right over him (life/life.js)
+  const offBird = bus.on('life:bird', (e) => { if (e && e.id) sawCreature(e.id, e.x, e.z, e.y); });
   let birdT = 0;
   function birds(dt) {
     birdT -= dt;
     if (birdT > 0 || !animals || !animals.list) return;
-    birdT = 1;
+    birdT = 0.5;
     const p = traveller.position;
     for (const a of animals.list()) {
       if (!a.shown || !a.id.startsWith('bird_')) continue;
       const dx = a.x - p.x; const dz = a.z - p.z;
-      if (dx * dx + dz * dz < 4.5) sawCreature(a.id, a.x, a.z);
+      if (dx * dx + dz * dz < CONTACT.bird * CONTACT.bird) sawCreature(a.id, a.x, a.z);
     }
   }
 
@@ -409,10 +462,12 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     update,
     /** A fish or bird id was seen (life/fish.js calls this on a leap, with where it leapt). */
     sawCreature,
+    /** Begin the opening story (main.js, once the page has opened). */
+    startIntro() { if (opening) opening.start(); },
     /** The 도감 book is open (the walk waits). */
     modal: () => ui.isOpen,
     /** Places of the 도감 found so far. */
     found: () => [...found],
-    dispose() { window.removeEventListener('keydown', onKey); offBird(); ui.dispose(); },
+    dispose() { window.removeEventListener('keydown', onKey); offBird(); if (opening) opening.dispose(); ui.dispose(); },
   };
 }

@@ -761,6 +761,8 @@ export function createPaperAudio({ muted = false } = {}) {
   const api = {
     /** The live AudioContext (null until the first gesture). */
     get context() { return ctx; },
+    /** The master gain (after the limiter): other sounds (game/UI sounds in audio/sfx.js) join here, so mute holds. */
+    get output() { return engine ? engine.master : null; },
     get muted() { return isMuted; },
     /** Create/resume the AudioContext. Must be called from a user gesture (main wires 'input:first'). */
     unlock() {

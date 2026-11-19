@@ -685,10 +685,11 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
         : 3 + Math.floor(hash3(f, cyc, 9) * (FS - 2));
       const span = cfg.wing * 2 * (spec ? spec.size : 1);
       const gap = Math.max(1, (spec ? spec.size : 1) * 0.8); // bigger birds fly further apart
-      // the 도감 learns the species halfway across, when the flock is over the traveller's view
-      if (spec && active && s > 0.42 && s < 0.6 && fSeen[f] !== cyc) {
+      // the 도감 learns the species halfway across - only from a flock that passes right over the traveller (its line
+      // runs through the point the camera sees over him, `lat` off to the side), with where the lead bird is
+      if (spec && active && s > 0.42 && s < 0.6 && fSeen[f] !== cyc && Math.abs(lat) < 1.5) {
         fSeen[f] = cyc;
-        if (spec.seen) bus.emit('life:bird', { id: spec.seen, sprite: spName });
+        if (spec.seen) bus.emit('life:bird', { id: spec.seen, sprite: spName, x: bx, y: flockHeight(f), z: bz });
       }
       const heading = Math.atan2(dirx, dirz);
       for (let j = 0; j < FS; j++) {

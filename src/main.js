@@ -1,5 +1,5 @@
 // Pop-up Atlas composition root.
-// URL params: ?seed=N  ?quality=low|med|high  ?mute=1  ?hint=0  ?night=1  ?life=0  ?animals=0
+// URL params: ?seed=N  ?quality=low|med|high  ?mute=1  ?hint=0  ?intro=0  ?night=1  ?life=0  ?animals=0
 import * as THREE from 'three';
 import { CONFIG, QUALITY, TILE_SIZE } from './core/config.js';
 import { bus } from './core/events.js';
@@ -17,6 +17,7 @@ import { createPost } from './render/post.js';
 import { createMaterials } from './render/materials.js';
 import { createPaperAudio } from './audio/paper.js';
 import { createMusic } from './audio/music.js';
+import { createSfx } from './audio/sfx.js';
 import { createDayNight } from './render/daynight.js';
 import { createLife } from './life/life.js';
 import { createAnimals } from './life/animals.js';
@@ -34,6 +35,7 @@ const seed = Number.isFinite(seedParam) ? seedParam : CONFIG.DEFAULT_SEED;
 const quality = QUALITY[params.get('quality')] ? params.get('quality') : CONFIG.DEFAULT_QUALITY;
 const muted = params.get('mute') === '1';
 const showHint = params.get('hint') !== '0';
+const showIntro = params.get('intro') !== '0';
 
 state.seed = seed;
 state.quality = quality;
@@ -57,6 +59,7 @@ async function boot() {
   const post = createPost({ renderer, scene, camera: follow.camera, quality });
   const audio = createPaperAudio({ muted });
   const music = createMusic({ audio });
+  const sfx = createSfx({ audio }); // 도감 / talk / season UI sounds (public/sounds)
   const daynight = createDayNight({ scene, night: params.get('night') === '1' });
   // ambient life + weather (leaves, snow, rain, birds, chimney smoke, fireflies ...): 2 draw calls; ?life=0 disables it
   const life = params.get('life') === '0' || CONFIG.life.enabled === false ? null : createLife({ scene, assets, wfc, world, daynight, camera: follow.camera, quality, seed });
@@ -68,10 +71,10 @@ async function boot() {
   // 황지 페이퍼트레일: the class mascots talk; the 태백 places go into the 도감
   // 황지 페이퍼트레일: weather per season ring, leaping stream fish, talking mascots / legends / 도감
   const weather = createWeather({ traveller, lights, seed });
-  const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, weather, seed });
+  const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, weather, seed, sfx, intro: showIntro });
   // (the 수굴 spring of 황지연못: hj_pond is pinned at cell (1, 0), 상지's spring sits south of its middle)
   const fish = createFish({ scene, world, traveller, camera: follow.camera, assets, daynight, onLeap: (id, f, x, z) => npcs.sawCreature(id, x, z), springs: [[1 * TILE_SIZE + 0.32, 0 * TILE_SIZE + 0.48]] });
-  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life };
+  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life, audio, sfx };
   // N: day / night, M: music on / off (keys only - no on-screen UI)
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -174,6 +177,7 @@ async function boot() {
   lights.update(0, traveller, follow.camera);
   render(0);
   loop.start();
+  npcs.startIntro(); // the short spoken guide to the trip, top centre
 }
 
 boot().catch((err) => {
