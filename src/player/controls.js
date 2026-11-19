@@ -69,8 +69,12 @@ function buildMarkerGeometry(radius) {
   return g;
 }
 
-export function createControls({ domElement, camera, traveller }) {
+export function createControls({ domElement, camera, traveller, world = null }) {
   const C = CONFIG.player;
+  const groundAt = typeof traveller.groundAt === 'function' ? traveller.groundAt : () => 0;
+  // 황지: route cost of a cell - roads and bridges are cheap, so a clicked walk follows the roads (길 찾기)
+  const ROAD_COST = C.routeRoadCost ?? 0.5;
+  const costAt = (x, z) => { if (!world || !world.surfaceAt) return 1; const s = world.surfaceAt(x, z); return s === 'path' || s === 'bridge' ? ROAD_COST : 1; };
   const down = new Set();
   const out = { x: 0, z: 0 };
   const ray = new THREE.Raycaster();
@@ -82,10 +86,11 @@ export function createControls({ domElement, camera, traveller }) {
   const canPass = typeof traveller.canPass === 'function' ? traveller.canPass : canStand;
 
   // ---- route finding (grid A* around the traveller; only used when the straight line is blocked) ---------------
-  const RS = C.routeCell ?? 0.15; // cell size (world units)
-  const RN = Math.max(16, Math.round((C.routeSpan ?? 12) / RS) | 1); // cells across
+  const RS = C.routeCell ?? 0.2; // cell size (world units)
+  const RN = Math.max(16, Math.round((C.routeSpan ?? 34) / RS) | 1); // cells across (황지: a whole screen, so every click is planned)
   const RNN = RN * RN;
   const rOpen = new Int8Array(RNN); // -1 unknown, 0 blocked, 1 open
+  const rCost = new Float32Array(RNN); // step cost of an open cell (roads cheaper)
   const rG = new Float32Array(RNN);
   const rFrom = new Int32Array(RNN);
   const rState = new Uint8Array(RNN); // 0 new, 1 queued, 2 done
@@ -121,8 +126,19 @@ export function createControls({ domElement, camera, traveller }) {
   }
   function rIsOpen(i) {
     let o = rOpen[i];
-    if (o < 0) { o = canPass(rX0 + (i % RN) * RS, rZ0 + ((i / RN) | 0) * RS) ? 1 : 0; rOpen[i] = o; }
+    if (o < 0) {
+      const x = rX0 + (i % RN) * RS; const z = rZ0 + ((i / RN) | 0) * RS;
+      o = canPass(x, z) ? 1 : 0; rOpen[i] = o;
+      if (o) rCost[i] = costAt(x, z);
+    }
     return o === 1;
+  }
+  /** Straight segment that stays on the road the whole way? (string-pulling must not cut a road corner over the grass) */
+  function segRoad(ax, az, bx, bz) {
+    const d = hypot2(bx - ax, bz - az);
+    const n = Math.max(1, Math.ceil(d / 0.15));
+    for (let i = 0; i <= n; i++) { const k = i / n; if (costAt(ax + (bx - ax) * k, az + (bz - az) * k) > ROAD_COST) return false; }
+    return true;
   }
   /** Straight segment passable for the body? (sampled every 0.06) */
   function segClear(ax, az, bx, bz) {
@@ -156,11 +172,13 @@ export function createControls({ domElement, camera, traveller }) {
       goal = best;
     }
     const ggx = goal % RN; const ggz = (goal / RN) | 0;
+    rCost[start] = costAt(px, pz);
     rG[start] = 0; rFrom[start] = -1; rState[start] = 1;
-    rPush(start, hypot2(sx - ggx, sz - ggz));
+    rPush(start, hypot2(sx - ggx, sz - ggz) * ROAD_COST);
     let found = false;
     let near = start; let nearH = hypot2(sx - ggx, sz - ggz); const startH = nearH;
-    while (rHeapN > 0) {
+    let budget = RNN; // never more than one sweep of the window
+    while (rHeapN > 0 && budget-- > 0) {
       const i = rPop();
       if (rState[i] === 2) continue;
       rState[i] = 2;
@@ -174,10 +192,11 @@ export function createControls({ domElement, camera, traveller }) {
         const j = nz * RN + nx;
         if (rState[j] === 2 || !rIsOpen(j)) continue;
         if (k >= 4 && (!rIsOpen(z * RN + nx) || !rIsOpen(nz * RN + x))) continue; // no corner cutting
-        const g = rG[i] + (k >= 4 ? 1.4142 : 1);
+        // 황지: weighted steps (roads cheaper), heuristic scaled by the cheapest cost so it stays admissible
+        const g = rG[i] + (k >= 4 ? 1.4142 : 1) * 0.5 * (rCost[i] + rCost[j]);
         if (rState[j] === 1 && g >= rG[j]) continue;
         rG[j] = g; rFrom[j] = i; rState[j] = 1;
-        rPush(j, g + hypot2(nx - ggx, nz - ggz));
+        rPush(j, g + hypot2(nx - ggx, nz - ggz) * ROAD_COST);
       }
     }
     if (!found) {
@@ -194,7 +213,15 @@ export function createControls({ domElement, camera, traveller }) {
     let ax = px; let az = pz; let a = 0;
     while (a < cells.length - 1) {
       let b = cells.length - 1;
-      while (b > a + 1 && !segClear(ax, az, wx(cells[b]), wz(cells[b]))) b--;
+      // a shortcut must be clear, and where the planned cells keep to the road the shortcut must keep to it too
+      const ok = (q) => {
+        const bx = wx(cells[q]); const bz = wz(cells[q]);
+        if (!segClear(ax, az, bx, bz)) return false;
+        let onRoad = true;
+        for (let m = a; m <= q && onRoad; m++) if (rCost[cells[m]] > ROAD_COST) onRoad = false;
+        return !onRoad || segRoad(ax, az, bx, bz);
+      };
+      while (b > a + 1 && !ok(b)) b--;
       ax = wx(cells[b]); az = wz(cells[b]);
       route.push(ax, az);
       a = b;
@@ -239,6 +266,48 @@ export function createControls({ domElement, camera, traveller }) {
   const sceneRoot = traveller.group && traveller.group.parent;
   if (sceneRoot) sceneRoot.add(mark);
 
+  // ---- 황지: the planned route, inked on the page as a dotted line that the walker eats up -------------------------
+  const DOTS = 240;
+  const dotGeo = new THREE.CircleGeometry(0.034, 8).rotateX(-Math.PI / 2);
+  const dotMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.ink || '#5b3a26'), transparent: true, opacity: 0.5, depthWrite: false });
+  const dots = new THREE.InstancedMesh(dotGeo, dotMat, DOTS);
+  dots.name = 'route-dots';
+  dots.count = 0;
+  dots.frustumCulled = false;
+  dots.renderOrder = 2;
+  if (sceneRoot) sceneRoot.add(dots);
+  const dotX = new Float32Array(DOTS); const dotZ = new Float32Array(DOTS); const dotOn = new Uint8Array(DOTS);
+  let dotN = 0; let dotsDirty = false;
+  const _dm = new THREE.Matrix4();
+  function showRoute(px, pz) {
+    dotN = 0;
+    let ax = px; let az = pz; let carry = 0.32;
+    for (let k = 0; k < route.length && dotN < DOTS; k += 2) {
+      const bx = route[k]; const bz = route[k + 1]; const L = hypot2(bx - ax, bz - az);
+      let s = carry;
+      while (s < L && dotN < DOTS) { dotX[dotN] = ax + ((bx - ax) * s) / L; dotZ[dotN] = az + ((bz - az) * s) / L; dotOn[dotN] = 1; dotN++; s += 0.27; }
+      carry = s - L; ax = bx; az = bz;
+    }
+    dotsDirty = true;
+  }
+  function clearRoute() { if (dotN) { dotN = 0; dotsDirty = true; } }
+  function updateDots() {
+    if (dotN) {
+      const px = traveller.position.x; const pz = traveller.position.z;
+      for (let i = 0; i < dotN; i++) if (dotOn[i] && hypot2(dotX[i] - px, dotZ[i] - pz) < 0.24) { dotOn[i] = 0; dotsDirty = true; }
+    }
+    if (!dotsDirty) return;
+    dotsDirty = false;
+    let n = 0;
+    for (let i = 0; i < dotN; i++) {
+      if (!dotOn[i]) continue;
+      _dm.makeTranslation(dotX[i], groundAt(dotX[i], dotZ[i]) + 0.014, dotZ[i]);
+      dots.setMatrixAt(n++, _dm);
+    }
+    dots.count = n;
+    dots.instanceMatrix.needsUpdate = true;
+  }
+
   function stampMark(x, z) {
     const y = typeof traveller.groundAt === 'function' ? traveller.groundAt(x, z) : 0;
     mark.position.set(x, y + 0.012, z);
@@ -262,6 +331,7 @@ export function createControls({ domElement, camera, traveller }) {
     target = null;
     side = 0;
     route.length = 0; routeFor = null;
+    clearRoute();
     fadeMark();
   }
 
@@ -284,7 +354,12 @@ export function createControls({ domElement, camera, traveller }) {
     noProgressT = 0;
     bestDist = Infinity;
     if (!isDrag) { side = 0; sideHold = 0; }
-    if (!isDrag || (routeFor && hypot2(x - routeFor.x, z - routeFor.z) > 0.3)) { route.length = 0; routeFor = null; routeFail = 0; }
+    if (!isDrag || (routeFor && hypot2(x - routeFor.x, z - routeFor.z) > 0.3)) { route.length = 0; routeFor = null; routeFail = 0; clearRoute(); }
+    // 황지: a click plans the whole way at once (roads preferred) and inks it on the page
+    if (!isDrag) {
+      const px = traveller.position.x; const pz = traveller.position.z;
+      if (hypot2(x - px, z - pz) > 0.7 && planRoute(px, pz, x, z)) { routeFor = { x, z }; showRoute(px, pz); }
+    }
     stampMark(x, z);
     if (!isDrag || hypot2(x - lastEmitX, z - lastEmitZ) > 0.25) {
       lastEmitX = x; lastEmitZ = z;
@@ -297,7 +372,17 @@ export function createControls({ domElement, camera, traveller }) {
     if (r.width <= 0 || r.height <= 0) return;
     ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    if (ray.ray.intersectPlane(plane, hit)) setTarget(hit.x, hit.z, isDrag);
+    plane.constant = 0;
+    if (!ray.ray.intersectPlane(plane, hit)) return;
+    // 황지: on the hills the page is not at y = 0 - slide the plane to the ground under the hit a few times
+    for (let k = 0; k < 4; k++) {
+      const y = groundAt(hit.x, hit.z);
+      if (Math.abs(y + plane.constant) < 0.004) break;
+      plane.constant = -y;
+      if (!ray.ray.intersectPlane(plane, hit)) break;
+    }
+    plane.constant = 0;
+    setTarget(hit.x, hit.z, isDrag);
   }
 
   // Shift held = run, a lone tap of Ctrl toggles a slow stroll (only when Ctrl is pressed and released on its own,
@@ -377,6 +462,7 @@ export function createControls({ domElement, camera, traveller }) {
     /** @returns {{x:number,z:number}} desired WORLD-space move direction (length 0..1). W = -Z (north). */
     getInput(dt) {
       lastPollTime = state.time;
+      updateDots();
       let x = 0;
       let z = 0;
       for (const code of down) { x += KEYS[code][0]; z += KEYS[code][1]; }
@@ -415,7 +501,8 @@ export function createControls({ domElement, camera, traveller }) {
       if (route.length > 0) {
         // skip waypoints already reached, cut ahead when the next one is in plain sight
         while (routeI < route.length - 2 && hypot2(route[routeI] - px, route[routeI + 1] - pz) < 0.12) routeI += 2;
-        while (routeI < route.length - 2 && segClear(px, pz, route[routeI + 2], route[routeI + 3])) routeI += 2;
+        // (황지: walking on the road, a shortcut has to stay on the road too)
+        while (routeI < route.length - 2 && segClear(px, pz, route[routeI + 2], route[routeI + 3]) && (costAt(px, pz) > ROAD_COST || segRoad(px, pz, route[routeI + 2], route[routeI + 3]))) routeI += 2;
         const wx = route[routeI] - px; const wz = route[routeI + 1] - pz;
         const wl = hypot2(wx, wz);
         if (routeI >= route.length - 2 && wl < C.arriveRadius) {
@@ -473,6 +560,8 @@ export function createControls({ domElement, camera, traveller }) {
       if (mark.parent) mark.parent.remove(mark);
       mark.geometry.dispose();
       markMat.dispose();
+      if (dots.parent) dots.parent.remove(dots);
+      dotGeo.dispose(); dotMat.dispose();
     },
   };
 }

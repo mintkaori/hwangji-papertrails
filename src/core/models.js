@@ -98,6 +98,14 @@ export const MODELS = {
   hj_daiso: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 다이소 태백황지점
   hj_claw: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 황지로 인형뽑기
   hj_library: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 태백산소드림도서관
+  // round 3: 황지동·상장동 laid out by hand (ORIGIN_FIXED in world/wfc.js)
+  hj_pond_b: { sockets: S(g, g, g, g), tags: ['water', 'blocker'], biomes: {} }, // 황지연못 중지 + 돌다리, 버드나무 (the pond spans two cells)
+  hj_station: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 태백역
+  hj_market: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 황지자유시장 (1971)
+  hj_mural_a: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 상장동 탄광이야기 마을: 광부 벽화
+  hj_mural_b: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: {} }, // 상장동 탄광이야기 마을: 퇴근길 벽화
+  hj_avenue: { sockets: S(g, p, g, p), tags: ['path'], biomes: {} }, // 벚꽃 큰길 (E-W)
+  hj_junction: { sockets: S(p, p, g, p), tags: ['path'], biomes: {} }, // 이정표 갈림길 (N, E, W)
   ch_kkachibal: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 1.3 } }, // 철암 까치발 건물
   ch_coal: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 0.9 } }, // 철암역두 선탄시설
   ch_mine: { sockets: S(g, g, g, g), tags: ['landmark', 'blocker'], biomes: { pinewood: 1.0 } }, // 갱도 입구
@@ -122,7 +130,7 @@ export const MODELS = {
   fv_snow: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { snow: 0.8 } }, // 태백산 눈축제
   fv_azalea: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { blossom: 0.7 } }, // 태백산 철쭉제
   fv_maple_gate: { sockets: S(p, g, p, g), tags: ['path', 'landmark'], biomes: { pinewood: 0.6 } }, // 철암 단풍 축제
-  fv_maple_lane: { sockets: S(p, g, p, g), tags: ['path', 'forest'], biomes: { pinewood: 3.2, heartland: 0.4 } }, // 단풍길: maples both sides
+  fv_maple_lane: { sockets: S(p, g, p, g), tags: ['path', 'forest'], biomes: { pinewood: 3.2 } }, // 단풍길: maples both sides (autumn ring only: the hub is spring now)
 };
 
 export const MODEL_IDS = Object.keys(MODELS);

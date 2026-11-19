@@ -26,9 +26,9 @@ export const WEATHER = {
   leaves: { name: '낙엽 바람', icon: '🍂', add: { leaves: 1 }, mul: {}, wind: 2.3, dim: 0.02, fog: 1 },
 };
 
-/** Weather of each season ring: [weather, weight]. heartland = the 황지 hub (autumn). */
+/** Weather of each season ring: [weather, weight]. heartland = the 황지동·상장동 hub (spring). */
 export const CLIMATE = {
-  heartland: [['clear', 4], ['cloudy', 2], ['leaves', 2], ['drizzle', 1], ['fog', 1]],
+  heartland: [['clear', 4], ['petals', 2], ['cloudy', 1], ['drizzle', 2], ['shower', 1]], // 황지동·상장동 in spring
   snow: [['snow', 3], ['heavysnow', 2], ['blizzard', 1], ['rime', 2], ['clear', 1]],
   blossom: [['clear', 3], ['petals', 2], ['drizzle', 2], ['fog', 1]],
   desert: [['clear', 3], ['windy', 2], ['shower', 2], ['sea', 1], ['cloudy', 1]],

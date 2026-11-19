@@ -13,7 +13,8 @@ export const life = {
 
   biomes: {
     //            leaves dust  gusts snow  petals rain  mist  fireflies butterflies clouds birds
-    heartland: { leaves: 0.8, dust: 0.0, gusts: 0.0, snow: 0.0, petals: 0.0, rain: 0.0, mist: 0.0, fireflies: 0.3, butterflies: 0.5, clouds: 0.8, birds: 1.0 },
+    // 황지: the hub is 황지동·상장동 in spring - drifting cherry petals and butterflies, no autumn leaves
+    heartland: { leaves: 0.0, dust: 0.0, gusts: 0.0, snow: 0.0, petals: 0.55, rain: 0.0, mist: 0.0, fireflies: 0.25, butterflies: 0.9, clouds: 0.8, birds: 1.0 },
     // 황지: desert = 매봉산 summer (pollen in the wind, butterflies), pinewood = 철암 autumn (maple leaves, a little fog);
     // game/weather.js adds rain, snow storms, fog and wind on top of these values
     desert:    { leaves: 0.0, dust: 0.45, gusts: 0.8, snow: 0.0, petals: 0.0, rain: 0.0, mist: 0.0, fireflies: 0.5, butterflies: 0.8, clouds: 0.7, birds: 0.8 },
@@ -31,13 +32,35 @@ export const life = {
   snow: { size: [0.04, 0.07], fall: [0.5, 0.85], sway: 0.16, tumble: 0.9, land: 2.6, wind: 0.22, colors: ['#ffffff', '#fffaf2', '#fbf6ee'] },
   petals: { size: [0.085, 0.135], fall: [0.34, 0.6], sway: 0.4, tumble: 1.8, land: 4.5, wind: 0.45, colors: ['#f7b9c8', '#f29db4', '#fbd3dc', '#fff4f2'] },
   // thin, short, slanted streaks in the mist colour (fixer pass: the fat white bars read as poles stuck in the board)
-  rain: { size: [0.11, 0.19], width: 0.008, fall: [6.5, 8.0], land: 0.2, wind: 1.7, splash: 0.07, colors: ['#a9bcbb', '#98adae'] },
+  // 황지: thin, long, pale-blue water streaks (were grey paper strips) and a slightly wider splash ring
+  rain: { size: [0.16, 0.3], width: 0.0062, fall: [6.8, 8.6], land: 0.26, wind: 1.7, splash: 0.085, colors: ['#e2eef4', '#cfe1ea', '#f2f8fb'] },
   // look pass: motes were hard white pom-poms near the lens: smaller, lower, and faded within ~5 units of the camera
   dust: { size: [0.022, 0.038], speed: [0.12, 0.3], height: [0.15, 1.5], colors: ['#f1dfb6', '#f6e9c9', '#e6cf9f'] },
   gusts: { length: [0.5, 0.95], width: 0.03, speed: 3.6, period: 9.5, height: [0.05, 0.3], colors: ['#f3e3ba', '#ead7a8'] },
   butterflies: { size: 0.13, roam: 1.1, height: [0.3, 0.75], flap: 11, flowers: 0.9 /* animals round 3: over a tile with flowers a butterfly flies whatever the biome density */, colors: ['#fff6e0', '#f6c64a', '#ef8a3c', '#9cc3e8', '#f3a6c0'] },
   // birds fly just above the treetops: higher up they leave the focal plane of the tilt-shift and blur away
-  birds: { period: 30, cross: 15, span: 34, height: 2.1, wing: 0.2, flap: 6.5, shadow: 0.2, colors: ['#f6f1e6', '#e9e2d4'], spriteNames: [] },
+  birds: {
+    period: 30, cross: 15, span: 34, height: 2.1, wing: 0.2, flap: 6.5, shadow: 0.2, colors: ['#f6f1e6', '#e9e2d4'], spriteNames: [],
+    // 황지: Taebaek birds in flight (art atlas fly_*, seen from above; the card creases on the body, so the wings
+    // beat like the paper bird's). One species per crossing, drawn from the list of the season ring the traveller
+    // stands in (null = the white paper bird). size = x the paper bird's span, flock = [min, max] birds,
+    // flap = x the wing beat, seen = creature id for the 도감 (game/npcs.js) when the flock passes over.
+    // artHeight: they fly lower than the paper birds (height), where the tilt-shift keeps the art sharp.
+    artHeight: 1.2,
+    species: {
+      fly_jay: { size: 1.45, flock: [2, 4], flap: 0.85, seen: 'bird_jay' },
+      fly_oriole: { size: 1.35, flock: [2, 3], flap: 1, seen: 'bird_oriole' },
+      fly_mandarin: { size: 1.55, flock: [2, 5], flap: 1.5, seen: 'bird_mandarin' },
+      fly_kingfisher: { size: 1.1, flock: [1, 1], flap: 2.1, seen: 'bird_kingfisher' },
+    },
+    rings: {
+      heartland: ['fly_jay', 'fly_mandarin', 'fly_oriole', null],
+      snow: ['fly_jay', null, null],
+      blossom: ['fly_oriole', 'fly_kingfisher', 'fly_jay', null],
+      desert: ['fly_oriole', 'fly_kingfisher', null],
+      pinewood: ['fly_jay', 'fly_mandarin', 'fly_kingfisher'],
+    },
+  },
   smoke: {
     // animals round 3: round discs in a slow stack, warm paper white (was life 3.6, rise 0.95, size [0.12, 0.32], drift 0.35, cool white)
     life: 5.4, rise: 0.78, size: [0.085, 0.235], drift: 0.2, wobble: 0.045, spin: 0.5, night: 0 /* moonlit puffs read as dark blue dots, so chimneys rest at night */, color: ['#fff3dc', '#f8e8cb'],

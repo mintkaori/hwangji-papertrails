@@ -14,9 +14,9 @@ export const FISH = {
 };
 const IDS = Object.keys(FISH);
 const N = 6; // leaps at once
-const RINGS = N * 2;
+const RINGS = N * 2 + 8; // (+ the welling rings of springs: 황지연못's 수굴)
 
-export function createFish({ scene, world, traveller, camera, assets, daynight, onLeap = null }) {
+export function createFish({ scene, world, traveller, camera, assets, daynight, onLeap = null, springs = [] }) {
   const tex = assets && assets.textures && assets.textures.art;
   if (!tex) return { update() {}, dispose() {} };
 
@@ -108,15 +108,26 @@ export function createFish({ scene, world, traveller, camera, assets, daynight, 
       l.on = true; l.id = id; l.x = x; l.z = z; l.dx = dir * (0.22 + rnd() * 0.18); l.dz = (rnd() - 0.5) * 0.12;
       l.t = 0; l.dur = 0.75 + rnd() * 0.35; l.h = 0.2 + rnd() * 0.2; l.len = FISH[id].len; l.ring0 = false;
       splash(x, z);
-      if (onLeap) onLeap(id, FISH[id]);
+      if (onLeap) onLeap(id, FISH[id], x, z);
       return;
     }
   }
 
+  let springT = 0;
   function update(dt) {
-    if (!Object.keys(sprite).length) return;
-    wait -= dt;
-    if (wait <= 0) { tryLeap(); wait = 0.9 + rnd() * 1.8; }
+    // 황지: springs well up in slow rings (황지연못: about 5,000 tonnes a day rise from the 수굴 south of 상지)
+    springT -= dt;
+    if (springT <= 0 && springs.length) {
+      springT = 0.45 + rnd() * 0.45;
+      const p = traveller.position;
+      for (const [sx, sz] of springs) {
+        if (Math.abs(sx - p.x) + Math.abs(sz - p.z) < 18) splash(sx + (rnd() - 0.5) * 0.16, sz + (rnd() - 0.5) * 0.12);
+      }
+    }
+    if (Object.keys(sprite).length) {
+      wait -= dt;
+      if (wait <= 0) { tryLeap(); wait = 0.9 + rnd() * 1.8; }
+    }
     // camera frame for the billboards (cards stay upright, facing the camera's horizontal direction)
     camera.updateMatrixWorld();
     const e = camera.matrixWorld.elements;

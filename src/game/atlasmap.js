@@ -58,7 +58,7 @@ const hash = (x, z, k) => {
 // ---- procedural icons (used when game_icons has no cell of that name) --------------------------------------------
 function scrapShape(ctx, kind, s) {
   ctx.lineWidth = Math.max(1, s * 0.09); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const fill = { leaf: '#b9603f', shell: '#e8d3ac', snowflake: '#fbf6ea', petal: '#c98374', feather: '#8a6a4c', star: '#dca848' }[kind] || '#d9a441';
+  const fill = { leaf: '#f2bf2a' /* 황지: 개나리 yellow (spring hub) */, shell: '#e8d3ac', snowflake: '#fbf6ea', petal: '#c98374', feather: '#8a6a4c', star: '#dca848' }[kind] || '#d9a441';
   ctx.fillStyle = fill; ctx.strokeStyle = INK;
   ctx.beginPath();
   if (kind === 'leaf') { ctx.moveTo(0, -s); ctx.bezierCurveTo(s * 0.95, -s * 0.5, s * 0.8, s * 0.5, 0, s); ctx.bezierCurveTo(-s * 0.8, s * 0.5, -s * 0.95, -s * 0.5, 0, -s); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -s * 0.7); ctx.lineTo(0, s * 1.15); ctx.stroke(); }

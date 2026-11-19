@@ -48,7 +48,25 @@ function poly(g, p) { g.beginPath(); g.moveTo(p[0], p[1]); for (let i = 2; i < p
 
 /** Procedural fallback shapes, drawn in a [-1, 1] box (y down). `edge` = the cut paper core around the shape. */
 const DRAW = {
+  // 황지: the hub's scrap is a 개나리 (forsythia) blossom now - four yellow petals on a green twig (spring, not a maple leaf)
   leaf(g, P) {
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.strokeStyle = P.cutEdge; g.lineWidth = 0.2; g.beginPath(); g.moveTo(0, 0.95); g.lineTo(0, 0.2); g.stroke();
+    g.strokeStyle = '#6f8f3a'; g.lineWidth = 0.09; g.beginPath(); g.moveTo(0, 0.95); g.lineTo(0, 0.2); g.stroke();
+    for (let k = 0; k < 2; k++) {
+      for (let i = 0; i < 4; i++) {
+        g.save(); g.rotate((i * Math.PI) / 2 + Math.PI / 4 + 0.12);
+        g.fillStyle = k === 0 ? P.cutEdge : (i % 2 ? '#f2bf2a' : '#f7cf3f');
+        const s2 = k === 0 ? 1.12 : 1;
+        g.beginPath(); g.ellipse(0, -0.42 * s2, 0.26 * s2, 0.46 * s2, 0, 0, TAU); g.fill();
+        g.restore();
+      }
+    }
+    g.fillStyle = '#d99a1c'; g.beginPath(); g.arc(0, 0, 0.16, 0, TAU); g.fill();
+    g.fillStyle = '#c27a12'; g.beginPath(); g.arc(0, 0, 0.07, 0, TAU); g.fill();
+  },
+  // the original maple leaf (kept for reference / other biomes)
+  mapleLeaf(g, P) {
     const pts = [0, -0.95, 0.26, -0.5, 0.74, -0.62, 0.6, -0.14, 0.94, 0.12, 0.5, 0.3, 0.56, 0.62, 0.14, 0.48, 0.05, 0.62, -0.05, 0.62, -0.14, 0.48, -0.56, 0.62, -0.5, 0.3, -0.94, 0.12, -0.6, -0.14, -0.74, -0.62, -0.26, -0.5];
     g.lineJoin = 'round';
     g.fillStyle = P.cutEdge; g.strokeStyle = P.cutEdge; g.lineWidth = 0.16; poly(g, pts); g.fill(); g.stroke();
@@ -210,6 +228,7 @@ function makeAtlas() {
   function useIcons(img, json) {
     let n = 0;
     SCRAP_IDS.forEach((kind, i) => {
+      if (kind === 'leaf') return; // 황지: the drawn forsythia blossom stays (the sheet's icon is an autumn maple leaf)
       const r = iconRect(json, 'scrap_' + kind, img.naturalWidth || img.width, img.naturalHeight || img.height);
       if (r) { drawIcon(i, img, r, kind === 'snowflake' ? '#5f86b4' : null); n++; }
     });

@@ -28,6 +28,26 @@ const SHIFT = 5;
 const MASK = GRID - 1;
 const NONE = 0x7fffffff;
 
+// ---- 황지: terrain (world/terrain.js) on the page: the vertex rides the height field, the fragment tilts its normal
+// with the slope and inks faint contour lines, like the cut layers of a paper relief map
+const TERRAIN_PAGE_VERTEX = `
+{
+  vec2 tW = (modelMatrix * vec4(position.x, 0.0, position.z, 1.0)).xz;
+  float tH = terrainH(tW);
+  transformed.y += tH;
+  vTerr = vec3(tH, terrainGrad(tW));
+  vTerrW = tW;
+}`;
+const TERRAIN_PAGE_FRAGMENT = `
+{
+  float tc = vTerr.x / 0.17;
+  float tw = max(fwidth(tc), 1e-4);
+  float tl = 1.0 - smoothstep(0.0, tw * 1.6, abs(fract(tc - 0.5) - 0.5));
+  diffuseColor.rgb *= 1.0 - 0.14 * tl * smoothstep(0.03, 0.08, vTerr.x);
+  // slopes facing the low sun a touch warmer and brighter, the far side a touch darker (paper relief)
+  diffuseColor.rgb *= 1.0 + clamp(dot(vTerr.yz, vec2(-0.35, 0.45)), -0.12, 0.12);
+}`;
+
 // ---- biome pass: per-biome colour transform (CONFIG.world.biomeTint), shared by the page and the tile batches ----
 const NB = BIOMES.length;
 /** GLSL: affine colour transform (r0..r2 = matrix rows, offset in .w); k = how much of teal / blue water is kept. */
@@ -44,7 +64,44 @@ vec3 biomeTintGround(vec3 c, vec4 r0, vec4 r1, vec4 r2, float k) {
   vec3 t = max(vec3(dot(r0.xyz, c) + r0.w, dot(r1.xyz, c) + r1.w, dot(r2.xyz, c) + r2.w), 0.0);
   return mix(t, c, smoothstep(0.03, 0.14, min(c.g, c.b) - c.r) * k);
 }
+// 황지: season of the leaves. Only the warm leaf colours (hue band f.y..f.z, in turns) turn by f.x turns - autumn
+// orange / gold foliage of the shared tiles becomes fresh spring green in the hub - while roofs, water, flowers, sky
+// blue and the neutrals keep their hue. f.w = strength (0 = off).
+vec3 foliageShift(vec3 c, vec4 f) {
+  if (f.w <= 0.001) return c;
+  float mx = max(c.r, max(c.g, c.b)); float mn = min(c.r, min(c.g, c.b)); float d = mx - mn;
+  if (d < 1e-4) return c;
+  float h = mx == c.r ? mod((c.g - c.b) / d, 6.0) : mx == c.g ? (c.b - c.r) / d + 2.0 : (c.r - c.g) / d + 4.0;
+  h /= 6.0;
+  float sat = d / mx;
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  // leaves are bright and strongly coloured: roofs and bricks (redder), plaster and kraft (paler), wood and trunks
+  // (darker) stay as printed - on the page, where tree and house share one print, this is the only test there is
+  float band = smoothstep(f.y - 0.008, f.y + 0.008, h) * (1.0 - smoothstep(f.z - 0.02, f.z + 0.03, h));
+  float k = band * f.w * smoothstep(0.64, 0.8, sat) * smoothstep(0.13, 0.22, lum);
+  // f.y == 0: a piece known to be leaves (tile batches): every red-orange-gold leaf colour turns, darker accents too
+  // (pinks and magentas past 0.9 turn - cherry blossom - are left alone)
+  if (f.y < 0.001) k = (1.0 - smoothstep(f.z - 0.02, f.z + 0.03, h)) * (1.0 - step(0.9, h)) * f.w * smoothstep(0.15, 0.35, sat) * smoothstep(0.02, 0.06, lum);
+  if (k <= 0.0) return c;
+  float nh = fract(h + f.x * k);
+  vec3 rgb = clamp(abs(mod(nh * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+  // fresh leaves: a touch lighter as they turn
+  return mx * (1.0 + 0.08 * k) * mix(vec3(1.0), rgb, sat);
+}
 `;
+/** Foliage shift per biome (CONFIG.world.biomeTint[b].foliage = { shift, from, to (degrees, linear-RGB hue), strength }):
+ *  Vector4[NB + 1] (turns), the last slot = off. */
+export function biomeFoliageUniforms(kind = 'foliage') {
+  const ck = '__' + kind;
+  if (_tintCache[ck]) return _tintCache[ck];
+  const table = (CONFIG.world.biomeTintEnabled !== false && CONFIG.world.biomeTint) || {};
+  const out = [];
+  for (let b = 0; b <= NB; b++) {
+    const f = b < NB && table[BIOMES[b]] && (table[BIOMES[b]][kind] || table[BIOMES[b]].foliage);
+    out.push(f ? new THREE.Vector4((+f.shift || 0) / 360, (+f.from || 0) / 360, (+f.to || 0) / 360, f.strength === undefined ? 1 : +f.strength) : new THREE.Vector4(0, 0, 0, 0));
+  }
+  return (_tintCache[ck] = out);
+}
 const _tintCache = {};
 /**
  * Uniform values of one transform kind ('ground' | 'prop') for every biome, in BIOMES order:
@@ -57,8 +114,10 @@ export function biomeTintUniforms(kind) {
   const rows = []; const keep = [];
   const L = [0.2126, 0.7152, 0.0722];
   const col = new THREE.Color();
-  for (let b = 0; b < NB; b++) {
-    const t = (BIOMES[b] !== 'heartland' && table[BIOMES[b]] && table[BIOMES[b]][kind]) || {};
+  // 황지: heartland (the spring hub) may carry a tint too; slot NB is the exact identity, for single-biome art and the
+  // kept pieces (reeds, rocks, roofs) that must show their printed colours whatever the cell's biome
+  for (let b = 0; b <= NB; b++) {
+    const t = (b < NB && table[BIOMES[b]] && table[BIOMES[b]][kind]) || {};
     const amount = +t.amount || 0; const sat = t.sat === undefined ? 1 : +t.sat; const mul = t.mul === undefined ? 1 : +t.mul;
     const gain = t.gain === undefined ? 1 : +t.gain; const lift = +t.lift || 0; const hue = ((+t.hue || 0) * Math.PI) / 180;
     col.set(t.tint || '#ffffff'); // sRGB hex -> linear working space
@@ -85,8 +144,10 @@ export function biomeTintUniforms(kind) {
     }
     keep.push(identity ? 0 : Math.min(1, Math.max(0, +t.keepWater || 0)));
   }
-  return (_tintCache[kind] = { rows, keep, count: NB });
+  return (_tintCache[kind] = { rows, keep, count: NB + 1 });
 }
+/** Index of the identity slot of biomeTintUniforms (tile batches: instance colour r = 1 + this). */
+export const TINT_IDENTITY = NB;
 /** Per-biome path print override (CONFIG.world.biomeTint[b].path = { color, edge, amount, edgeAmount }): Vector4[NB] x 2. */
 export function biomePathUniforms() {
   if (_tintCache.__path) return _tintCache.__path;
@@ -269,7 +330,7 @@ function imageMean(tex) {
   } catch { return 0.8; }
 }
 
-export function createBook({ scene, assets, wfc, materials, quality }) {
+export function createBook({ scene, assets, wfc, materials, quality, terrain = null, wet = null }) {
   const B = CONFIG.book;
   const palette = CONFIG.palette || {};
   const HW = B.pageHalfExtent; // the page reaches past the lit area on every side: no visible edge ("endless" book)
@@ -491,12 +552,13 @@ export function createBook({ scene, assets, wfc, materials, quality }) {
     uFib2: { value: 1 / fibreScale2 },
     uFibMean: { value: fibreMean },
     uCream: { value: cream.clone() },
-    uBiomeG: { value: biomeTintUniforms('ground').rows },
-    uBiomeGK: { value: biomeTintUniforms('ground').keep },
-    uBiomeP: { value: biomeTintUniforms('prop').rows },
-    uBiomePK: { value: biomeTintUniforms('prop').keep },
+    uBiomeG: { value: biomeTintUniforms('ground').rows.slice(0, NB * 3) },
+    uBiomeGK: { value: biomeTintUniforms('ground').keep.slice(0, NB) },
+    uBiomeP: { value: biomeTintUniforms('prop').rows.slice(0, NB * 3) },
+    uBiomePK: { value: biomeTintUniforms('prop').keep.slice(0, NB) },
     uBiomePath: { value: biomePathUniforms().tone },
     uBiomePathE: { value: biomePathUniforms().edge },
+    uBiomeF: { value: biomeFoliageUniforms().slice(0, NB) },
     uWorld0: { value: new THREE.Vector2() },
     uTrav: { value: new THREE.Vector4(0, 0, B.fadeNear ?? 8, B.fadeFar ?? 13.5) },
     ...waterUniforms(),
@@ -534,14 +596,18 @@ export function createBook({ scene, assets, wfc, materials, quality }) {
   }
   const pageMat = paperLike({ color: '#ffffff', side: THREE.FrontSide, map: uniqueMap(), fibre: 'none', vary: false });
   chain(pageMat, (shader) => {
-    bind(shader, ['uAtlas', 'uCells', 'uFibre', 'uFibreN', 'uOff', 'uAnchorMod', 'uBk', 'uGut', 'uGut2', 'uCrease', 'uFib', 'uFib2', 'uFibMean', 'uCream', 'uBiomeG', 'uBiomeGK', 'uBiomeP', 'uBiomePK', 'uBiomePath', 'uBiomePathE', 'uWorld0', 'uTrav', 'uWat', 'uWat2', 'uGnd', 'uWatPal', 'uReflTex', 'uReflMat', 'uRefl', 'uRefl2']);
+    bind(shader, ['uAtlas', 'uCells', 'uFibre', 'uFibreN', 'uOff', 'uAnchorMod', 'uBk', 'uGut', 'uGut2', 'uCrease', 'uFib', 'uFib2', 'uFibMean', 'uCream', 'uBiomeG', 'uBiomeGK', 'uBiomeP', 'uBiomePK', 'uBiomePath', 'uBiomePathE', 'uBiomeF', 'uWorld0', 'uTrav', 'uWat', 'uWat2', 'uGnd', 'uWatPal', 'uReflTex', 'uReflMat', 'uRefl', 'uRefl2']);
     const hasPools = shader.fragmentShader.includes('uPaperPoolCol') && shader.fragmentShader.includes('varying vec3 vPaperW');
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec2 vPg;\nvarying vec4 vReflP;\nuniform mat4 uReflMat;\n' + GUTTER_GLSL)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPg = position.xz;\nvReflP = uReflMat * (modelMatrix * vec4(position.x, 0.0, position.z, 1.0));\ntransformed.y += gutterH(position.xz, 0.0);');
+      .replace('#include <common>', '#include <common>\nvarying vec2 vPg;\nvarying vec4 vReflP;\nvarying vec3 vTerr;\nvarying vec2 vTerrW;\nuniform mat4 uReflMat;\n' + GUTTER_GLSL)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPg = position.xz;\nvReflP = uReflMat * (modelMatrix * vec4(position.x, 0.0, position.z, 1.0));\ntransformed.y += gutterH(position.xz, 0.0);' + TERRAIN_PAGE_VERTEX);
+    if (terrain && terrain.enabled) terrain.patch(shader, null);
+    else shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nfloat terrainH(vec2 p) { return 0.0; }\nvec2 terrainGrad(vec2 p) { return vec2(0.0); }');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', /* glsl */ `#include <common>
 varying vec2 vPg;
+varying vec3 vTerr; // 황지: terrain height + gradient (world/terrain.js)
+varying vec2 vTerrW; // 황지: world xz (wet paper)
 uniform highp sampler2DArray uAtlas;
 uniform sampler2D uCells;
 uniform sampler2D uFibre;
@@ -559,6 +625,7 @@ uniform vec4 uBiomeP[${NB * 3}];
 uniform float uBiomePK[${NB}];
 uniform vec4 uBiomePath[${NB}];
 uniform vec4 uBiomePathE[${NB}];
+uniform vec4 uBiomeF[${NB}];
 uniform vec2 uWorld0;
 uniform vec4 uTrav;   // xy: traveller in the frame of p, z / w: radius where the colour starts to fade / is gone
 // printed path (the warm pale kraft strip of the base print; sage / teal / ink fail the warmth test): 1 on the path
@@ -610,14 +677,15 @@ vec3 pageColor() {
   int b2 = min((int(texelFetch(uCells, ivec2(mod(ib + uAnchorMod + vec2(0.0, 1.0), ${GRID}.0)), 0).g * 255.0 + 0.5) >> 2) & 7, ${NB - 1});
   int b3 = min((int(texelFetch(uCells, ivec2(mod(ib + uAnchorMod + vec2(1.0, 1.0), ${GRID}.0)), 0).g * 255.0 + 0.5) >> 2) & 7, ${NB - 1});
   float w1 = bt.x * (1.0 - bt.y); float w2 = (1.0 - bt.x) * bt.y; float w3 = bt.x * bt.y; float w0 = 1.0 - w1 - w2 - w3;
-  if (b0 + b1 + b2 + b3 > 0) {
+  { // (황지: always - heartland, the spring hub, has its own tint now)
     #define BMIX(A, o) (w0 * A[b0 * 3 + o] + w1 * A[b1 * 3 + o] + w2 * A[b2 * 3 + o] + w3 * A[b3 * 3 + o])
     vec4 g0 = BMIX(uBiomeG, 0); vec4 g1 = BMIX(uBiomeG, 1); vec4 g2 = BMIX(uBiomeG, 2);
     vec4 p0 = BMIX(uBiomeP, 0); vec4 p1 = BMIX(uBiomeP, 1); vec4 p2 = BMIX(uBiomeP, 2);
     float gk = w0 * uBiomeGK[b0] + w1 * uBiomeGK[b1] + w2 * uBiomeGK[b2] + w3 * uBiomeGK[b3];
     float pk = w0 * uBiomePK[b0] + w1 * uBiomePK[b1] + w2 * uBiomePK[b2] + w3 * uBiomePK[b3];
     // the folded-flat print differs from the bare ground where a paper piece lies on it: those pixels get the prop transform
-    vec3 ground = biomeTintGround(base, g0, g1, g2, gk);
+    vec4 fw = w0 * uBiomeF[b0] + w1 * uBiomeF[b1] + w2 * uBiomeF[b2] + w3 * uBiomeF[b3];
+    vec3 ground = foliageShift(biomeTintGround(base, g0, g1, g2, gk), fw);
     // the road keeps its own tone per biome (trodden blue-grey track on snow, packed pale sand in the desert):
     // the ground tint alone would whiten / yellow it into the page and the main line of the composition is lost
     vec4 pt = w0 * uBiomePath[b0] + w1 * uBiomePath[b1] + w2 * uBiomePath[b2] + w3 * uBiomePath[b3];
@@ -645,7 +713,7 @@ vec3 pageColor() {
       ground = mix(ground, tone, pm * min(pt.w, 0.9));
       ground = mix(ground, pe.rgb, ed * pe.w);
     }
-    flat_ = mix(ground, biomeTint(flat_, p0, p1, p2, pk), isProp);
+    flat_ = mix(ground, foliageShift(biomeTint(flat_, p0, p1, p2, pk), fw), isProp);
     base = ground;
   }
   ${waterBodyGLSL(waterKinds)}
@@ -721,12 +789,13 @@ vec3 pageColor() {
   gPageTilt = tilt;
   return col;
 }`)
-      .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = pageColor();' + (hasPools ? WATER_GLOW_GLSL : '') + WATER_MIRROR_GLSL)
-      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize(normal + mat3(viewMatrix) * vec3(gPageTilt.x, 0.0, gPageTilt.y));');
+      .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = pageColor();' + TERRAIN_PAGE_FRAGMENT + (wet ? '\ndiffuseColor.rgb = wetPaper(diffuseColor.rgb, wetAt(vTerrW, 1.0));' : '') + (hasPools ? WATER_GLOW_GLSL : '') + WATER_MIRROR_GLSL)
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize(normal + mat3(viewMatrix) * vec3(gPageTilt.x - vTerr.y, 0.0, gPageTilt.y - vTerr.z));');
+    if (wet) wet.patch(shader);
     if (!shader.fragmentShader.includes('diffuseColor.rgb = pageColor();')) console.warn('[book] page shader hook not applied (unexpected material)');
-  }, 'book-page-v12-page');
+  }, 'book-page-v19-wet');
 
-  const pageGeo = new THREE.PlaneGeometry(HW * 2, HD * 2, Math.round(HW * 2 / 0.1), 8).rotateX(-Math.PI / 2);
+  const pageGeo = new THREE.PlaneGeometry(HW * 2, HD * 2, Math.round(HW * 2 / 0.1), terrain && terrain.enabled ? Math.round(HD * 2 / 0.3) : 8).rotateX(-Math.PI / 2); // 황지: rows for the hills
   const page = new THREE.Mesh(pageGeo, pageMat);
   page.name = 'page';
   page.position.y = -0.002;
@@ -817,7 +886,8 @@ vec3 pageColor() {
     shader.uniforms.uSheet = uSheet;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec2 vSheetUv;\n' + GUTTER_GLSL)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSheetUv = uv;\ntransformed.y += gutterH(position.xz, position.y);');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSheetUv = uv;\ntransformed.y += gutterH(position.xz, position.y);' + (terrain && terrain.enabled ? `\ntransformed.y += terrainH((modelMatrix * vec4(position, 1.0)).xz) * clamp(1.0 + position.y / ${T.toFixed(4)}, 0.0, 1.0);` : ''));
+    if (terrain && terrain.enabled) terrain.patch(shader, null);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec2 vSheetUv;\nuniform sampler2D uSheet;')
       .replace('#include <map_fragment>', `#include <map_fragment>
@@ -825,7 +895,7 @@ vec3 pageColor() {
     float sl = texture2D(uSheet, vSheetUv).g;
     diffuseColor.rgb *= mix(vec3(0.46, 0.33, 0.23), vec3(1.0), smoothstep(0.02, 0.42, sl));
   }`);
-  }, 'book-block-v2');
+  }, 'book-block-v3-terrain');
   const block = new THREE.Mesh(blockGeo, blockMat);
   block.name = 'page-block';
   block.position.y = -0.002;

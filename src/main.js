@@ -52,7 +52,7 @@ async function boot() {
   const world = createWorld({ scene, assets, wfc, materials, quality });
   const traveller = createTraveller({ scene, assets, world, materials });
   const follow = createFollowCamera({ aspect: window.innerWidth / Math.max(1, window.innerHeight) });
-  const controls = createControls({ domElement: canvas, camera: follow.camera, traveller });
+  const controls = createControls({ domElement: canvas, camera: follow.camera, traveller, world });
   const views = createViews({ follow }); // V cycles camera views
   const post = createPost({ renderer, scene, camera: follow.camera, quality });
   const audio = createPaperAudio({ muted });
@@ -69,8 +69,9 @@ async function boot() {
   // 황지 페이퍼트레일: weather per season ring, leaping stream fish, talking mascots / legends / 도감
   const weather = createWeather({ traveller, lights, seed });
   const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, weather, seed });
-  const fish = createFish({ scene, world, traveller, camera: follow.camera, assets, daynight, onLeap: (id) => npcs.sawCreature(id) });
-  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights };
+  // (the 수굴 spring of 황지연못: hj_pond is pinned at cell (1, 0), 상지's spring sits south of its middle)
+  const fish = createFish({ scene, world, traveller, camera: follow.camera, assets, daynight, onLeap: (id, f, x, z) => npcs.sawCreature(id, x, z), springs: [[1 * TILE_SIZE + 0.32, 0 * TILE_SIZE + 0.48]] });
+  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life };
   // N: day / night, M: music on / off (keys only - no on-screen UI)
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -94,7 +95,7 @@ async function boot() {
     state.time = loop.time;
     state.frame = loop.frame;
     const input = controls.getInput(dt) || idle;
-    traveller.update(dt, game.modal() ? idle : input); // No walking while the atlas page is open.
+    traveller.update(dt, game.modal() || npcs.modal() ? idle : input); // No walking while the atlas page or the 도감 is open.
     const p = traveller.position;
     const t = state.traveller;
     t.x = p.x; t.y = p.y; t.z = p.z;

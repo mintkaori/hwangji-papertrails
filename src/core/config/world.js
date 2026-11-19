@@ -85,7 +85,7 @@ export const world = {
   waterPadding: 0.03,
   pondRadius: 0.62,
   /** Biome tiles with an off-centre pond: model id -> [u (east), v (south), radius] in the tile's rot-0 frame. */
-  ponds: { desert_oasis: [0.12, 0.16, 0.48], frozen_pond: [0.08, 0.2, 0.56], hj_pond: [0, 0, 0.62] /* 황지연못 (pond donor base) */ },
+  ponds: { desert_oasis: [0.12, 0.16, 0.48], frozen_pond: [0.08, 0.2, 0.56], hj_pond: [0.26, 0.06, 0.86] /* 황지연못 상지 (wide; runs on into hj_pond_b) */, hj_pond_b: [-0.6, 0.02, 0.62] /* 중지 */ },
   /** Bridge deck: walkable half-width and height profile fallback when the model has no deck surface. */
   deckHalfWidth: 0.31,
   deckFallbackHeight: 0.0,
@@ -107,9 +107,16 @@ export const world = {
   // The page blends the transforms of neighbouring cells over one tile; a risen tile uses the biome of its own cell.
   biomeTintEnabled: true,
   /** Biomes whose prop tint skips reeds, rocks, haystacks, fences, roofs, logs (they keep their heartland colours). */
-  biomeTintKeep: { blossom: true },
+  biomeTintKeep: { blossom: true, heartland: true },
   biomeTint: {
-    heartland: { ground: {}, prop: {} },
+    // 황지: heartland is the 황지동·상장동 hub in SPRING - fresh green ground, the autumn-gold leaves of the shared
+    // tiles turned to new spring green (foliage: hue shift of the warm leaf colours only, see foliageShift in book.js)
+    heartland: {
+      ground: { hue: 4, sat: 1.08, tint: '#b8da8a', amount: 0.2, gain: 1.25, lift: 0.6, keepWater: 0.9 },
+      prop: { sat: 1.04, tint: '#e2f0c8', amount: 0.05, gain: 1.0, lift: 0.4, keepWater: 0.9 },
+      foliage: { shift: 72, from: 12, to: 62, strength: 1 }, // the printed page: only bright, strong leaf colours (roofs stay)
+      leaf: { shift: 76, from: 0, to: 62, strength: 1 }, // standing trees / bushes / tufts: every warm leaf colour turns green
+    },
     // 황지 페이퍼트레일: 'desert' is 매봉산 바람의 언덕 - a cool green highland of cabbage fields (was sand)
     desert: {
       ground: { hue: -6, sat: 1.05, tint: '#a8c784', amount: 0.42, gain: 1.15, lift: 0.62, keepWater: 0.85 },
@@ -127,6 +134,8 @@ export const world = {
       // look pass: hue -13 -> -5, amount 0.16 -> 0.07: generic bushes / reeds were turning red-pink
       prop: { hue: -5, sat: 1.04, tint: '#f7bfcd', amount: 0.07, gain: 1.0, lift: 0.35, keepWater: 0.9 },
       path: { color: '#f1e3c2', edge: '#b3975f', amount: 0.6, edgeAmount: 0.3 }, // cream garden path (the ground tint turned it lime)
+      foliage: { shift: 66, from: 12, to: 62, strength: 0.95 }, // 황지: 금대봉 is spring too - new green leaves, no autumn gold
+      leaf: { shift: 72, from: 0, to: 62, strength: 1 }, // standing leaves: red / orange / gold turn green, pink blossom stays
     },
     // 황지: 'pinewood' is 철암 in autumn - fallen maple leaves on the ground, coal-dark wood, warm light
     pinewood: {

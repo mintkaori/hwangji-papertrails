@@ -233,11 +233,16 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
   paint(S.snow, C.snow, L.snow.colors, [CELLS.flake, CELLS.dot]);
   paint(S.petals, C.petals, L.petals.colors, [CELLS.petal]);
   paint(S.rain, C.rain, L.rain.colors, [CELLS.bar]);
+  { const ca = bits.instanceColor.array; for (let q = S.rain * 3; q < (S.rain + C.rain) * 3; q++) ca[q] *= 1.28; } // 황지: drops of water glint
   paint(S.dust, C.dust, L.dust.colors, [CELLS.dot, CELLS.flake]);
   paint(S.gusts, C.gusts, L.gusts.colors, [CELLS.bar]);
   paint(S.butterflies, C.butterflies * 2, L.butterflies.colors, [CELLS.flyWing], 2);
   paint(S.birds, C.flocks * C.flockSize * 2, L.birds.colors, [CELLS.bird]);
   paint(S.smoke, C.smokeEmitters * C.smokePuffs, L.smoke.color, [CELLS.smoke]);
+  // 황지: the paper birds' cells and colours, put back when a slot returns from a Taebaek bird sprite to paper
+  const NBIRD = C.flocks * C.flockSize * 2;
+  const birdRect0 = rectArr.slice(S.birds * 4, (S.birds + NBIRD) * 4);
+  const birdCol0 = bits.instanceColor.array.slice(S.birds * 3, (S.birds + NBIRD) * 3);
 
   // ---- soft mesh ---------------------------------------------------------------------------------------
   const softGeo = new THREE.PlaneGeometry(1, 1);
@@ -342,6 +347,13 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
   const NF = C.flocks; const FS = C.flockSize;
   const fCyc = new Float64Array(NF).fill(-1e9); const fCx = new Float32Array(NF); const fCz = new Float32Array(NF);
   let birdSprites = null; // [u0, v0, w, h, aspect] per sprite when the art atlas has sky_bits_* birds
+  // 황지: the Taebaek species of L.birds.species (atlas fly_*): name -> [u0, v0, w, h, aspect]; one species per crossing
+  const flyNames = Object.keys(L.birds.species || {});
+  const flyRect = {};
+  const fSp = new Int8Array(NF).fill(-1); // species of each flock's crossing (index into flyNames, -1 = paper bird)
+  const fSeen = new Float64Array(NF).fill(-1e9); // the crossing (cycle) already reported to the 도감
+  // the Taebaek birds fly lower than the paper birds, near the focus plane of the tilt-shift, so their art stays sharp
+  const flockHeight = (f) => (fSp[f] >= 0 ? (L.birds.artHeight ?? 1.2) + 0.15 * f : L.birds.height + 0.35 * f);
   if (artTex) {
     fetch('./textures/art/atlas.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (!j || !j.sprites || !j.size) return;
@@ -349,10 +361,12 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
       const list = [];
       for (const name of Object.keys(j.sprites)) {
         const sp = j.sprites[name];
-        const isBird = want.includes(name) || (name.startsWith('sky_bits_') && /bird/i.test(String(sp.kind || sp.label || '')));
-        if (!isBird || !sp.rect) continue;
+        if (!sp.rect) continue;
         const [x, y, w, h] = sp.rect;
-        list.push([x / j.size[0], (y + h) / j.size[1], w / j.size[0], -h / j.size[1], w / h]); // atlas is top-down (flipY false)
+        const rect = [x / j.size[0], (y + h) / j.size[1], w / j.size[0], -h / j.size[1], w / h]; // atlas is top-down (flipY false)
+        if (flyNames.includes(name)) flyRect[name] = rect;
+        const isBird = want.includes(name) || (name.startsWith('sky_bits_') && /bird/i.test(String(sp.kind || sp.label || '')));
+        if (isBird) list.push(rect);
       }
       if (list.length) birdSprites = list;
     }).catch(() => {});
@@ -539,6 +553,7 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
     }
   }
 
+  const wetCyc = new Float64Array(C.rain).fill(-1); // 황지: the fall each raindrop last wetted the page for
   function rain() {
     const cfg = L.rain; const W = L.box.w; const D = L.box.d; const H = L.box.h; const count = C.rain;
     const slant = Math.atan2(cfg.wind, 7) * (Math.cos(camYaw) * windX - Math.sin(camYaw) * windZ);
@@ -563,6 +578,8 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
         put(M, i, px, py, pz, camYaw, -0.35, -slant, wd, len);
       } else {
         if (lt === 2) { hide(M, i); continue; } // no splash ring under a roof / inside a tree
+        // 황지: the drop wets the paper where it lands (render/wet.js) - once per fall
+        if (lt === 0 && wetCyc[j] !== cyc && world && world.wet) { wetCyc[j] = cyc; world.wet.drop(fx + dx, fz + dz, Math.min(1, g * 1.2)); }
         const l = (u - tFall) / cfg.land; const s = cfg.splash * (0.3 + 0.7 * l) * g * (l > 0.8 ? (1 - l) / 0.2 : 1);
         cellRect(rectArr, i * 4, CELLS.ring);
         put(M, i, fx + dx, 0.03 + landH[i], fz + dz, 0, -HALF_PI, 0, s, s);
@@ -635,48 +652,89 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
     const cfg = L.birds;
     const dens = dC[K.birds];
     const sprites = birdSprites;
+    const ca = bits.instanceColor.array;
+    let swapped = false;
     for (let f = 0; f < NF; f++) {
       const period = cfg.period * (1 + 0.23 * f);
       const ph = time / period + 0.37 * f + 0.12;
       const cyc = Math.floor(ph); const u = (ph - cyc) * period;
       const active = u < cfg.cross && dens > (f + 0.4) / NF * 0.9;
       if (active && (fCyc[f] !== cyc || Math.abs(fCx[f] - fx) + Math.abs(fCz[f] - fz) > 30)) {
+        // 황지: the species of this crossing, from the season ring the traveller stands in
+        fSp[f] = -1;
+        let bm = 0;
+        for (let b = 1; b < NB; b++) if (wC[b] > wC[bm]) bm = b;
+        const pool = cfg.rings && cfg.rings[BIOMES[bm]];
+        if (pool && pool.length) {
+          const name = pool[Math.floor(hash3(f, cyc, 11) * pool.length) % pool.length];
+          if (name && flyRect[name]) fSp[f] = flyNames.indexOf(name);
+        }
         // aim the crossing at the point above the page that the camera sees over the traveller (birds fly high,
         // so a path centred on the traveller itself would pass above the top of the frame)
-        const h = cfg.height + 0.35 * f;
+        const h = flockHeight(f);
         fCyc[f] = cyc; fCx[f] = fx + camHX * h; fCz[f] = fz + camHZ * h;
       }
       const ang = hash3(f, cyc, 5) * TAU; const dirx = Math.cos(ang); const dirz = Math.sin(ang);
       const s = u / cfg.cross;
       const along = (s - 0.5) * cfg.span; const lat = (hash3(f, cyc, 7) - 0.5) * 5 + Math.sin(s * 5 + f) * 0.8;
       const bx = fCx[f] + dirx * along - dirz * lat; const bz = fCz[f] + dirz * along + dirx * lat;
-      const nBirds = 3 + Math.floor(hash3(f, cyc, 9) * (FS - 2));
+      const spName = fSp[f] >= 0 ? flyNames[fSp[f]] : null;
+      const fr = spName ? flyRect[spName] : null;
+      const spec = fr ? cfg.species[spName] : null;
+      const nBirds = spec ? Math.min(FS, spec.flock[0] + Math.floor(hash3(f, cyc, 9) * (spec.flock[1] - spec.flock[0] + 1)))
+        : 3 + Math.floor(hash3(f, cyc, 9) * (FS - 2));
+      const span = cfg.wing * 2 * (spec ? spec.size : 1);
+      const gap = Math.max(1, (spec ? spec.size : 1) * 0.8); // bigger birds fly further apart
+      // the 도감 learns the species halfway across, when the flock is over the traveller's view
+      if (spec && active && s > 0.42 && s < 0.6 && fSeen[f] !== cyc) {
+        fSeen[f] = cyc;
+        if (spec.seen) bus.emit('life:bird', { id: spec.seen, sprite: spName });
+      }
       const heading = Math.atan2(dirx, dirz);
       for (let j = 0; j < FS; j++) {
         const i = S.birds + (f * FS + j) * 2; const si = T.birdShadows + f * FS + j;
         if (!active || j >= nBirds) { hide(M, i); hide(M, i + 1); softHide(si); continue; }
         const row = (j + 1) >> 1; const side = j % 2 ? 1 : -1;
-        const px = bx - dirx * row * 0.55 - dirz * side * row * 0.45;
-        const pz = bz - dirz * row * 0.55 + dirx * side * row * 0.45;
-        const py = cfg.height + 0.35 * f + 0.12 * Math.sin(time * 1.3 + j * 1.7);
-        const beat = Math.sin(time * cfg.flap + j * 0.9 + f);
-        if (sprites) {
+        const px = bx - dirx * row * 0.55 * gap - dirz * side * row * 0.45 * gap;
+        const pz = bz - dirz * row * 0.55 * gap + dirx * side * row * 0.45 * gap;
+        const py = flockHeight(f) + 0.12 * Math.sin(time * 1.3 + j * 1.7);
+        const beat = Math.sin(time * cfg.flap * (spec ? spec.flap : 1) + j * 0.9 + f);
+        if (fr) {
+          // 황지: a Taebaek bird seen from above on the paper bird's creased card: the crease is its body, so the
+          // wings beat; a white instance colour, so the paper birds' cream does not tint the art. The fold stops
+          // at flat (the wings never dip below the body): a card turned over shows its back, which renders black.
+          const o = i * 4; const c = i * 3;
+          rectArr[o] = fr[0]; rectArr[o + 1] = fr[1]; rectArr[o + 2] = fr[2]; rectArr[o + 3] = fr[3];
+          if (texArr[i] !== 1) { texArr[i] = 1; ca[c] = ca[c + 1] = ca[c + 2] = 1; swapped = true; }
+          const sh = Math.sin(heading); const ch = Math.cos(heading);
+          putBasis(M, i, px, py, pz, -ch, 0, sh, sh, 0, ch, span * (0.97 - 0.05 * beat), span / fr[4], span * Math.max(0.04, 0.45 + 1.35 * beat));
+          hide(M, i + 1);
+        } else if (sprites) {
           const sp = sprites[(f + j) % sprites.length]; const o = i * 4;
           rectArr[o] = sp[0]; rectArr[o + 1] = sp[1]; rectArr[o + 2] = sp[2]; rectArr[o + 3] = sp[3]; texArr[i] = 1;
           put(M, i, px, py, pz, heading + Math.PI, -HALF_PI + 0.35, beat * 0.12, cfg.wing * 2 * sp[4] * (0.9 + 0.1 * beat), cfg.wing * 2);
           hide(M, i + 1);
         } else {
+          if (texArr[i] !== 0) {
+            // back from a Taebaek bird: the paper bird's cell and colour again
+            const k = i - S.birds; const o = i * 4; const c = i * 3;
+            for (let q = 0; q < 4; q++) rectArr[o + q] = birdRect0[k * 4 + q];
+            for (let q = 0; q < 3; q++) ca[c + q] = birdCol0[k * 3 + q];
+            texArr[i] = 0; swapped = true;
+          }
           // one creased card per bird: the crease is the body, scaling its depth flaps the wings up and down
           const sp = cfg.wing * 2; const sh = Math.sin(heading); const ch = Math.cos(heading);
           putBasis(M, i, px, py, pz, -ch, 0, sh, sh, 0, ch, sp * (0.92 - 0.1 * beat), sp, sp * (1.1 + 2.3 * beat));
           hide(M, i + 1);
         }
         const sa = cfg.shadow * (1 - nightAmt);
-        if (sa > 0.003) softPut(si, px - lightX * py, 0.03, pz - lightZ * py, 0, -HALF_PI, 0.6, 0.46, cCloud.r, cCloud.g, cCloud.b, sa, 1, 1, 1);
+        const ss = Math.min(1.6, span / (cfg.wing * 2)); // a bigger bird, a bigger shadow
+        if (sa > 0.003) softPut(si, px - lightX * py, 0.03, pz - lightZ * py, 0, -HALF_PI, 0.6 * ss, 0.46 * ss, cCloud.r, cCloud.g, cCloud.b, sa, 1, 1, 1);
         else softHide(si);
       }
     }
-    if (sprites) texAttr.needsUpdate = true;
+    if (sprites || swapped) texAttr.needsUpdate = true;
+    if (swapped) bits.instanceColor.needsUpdate = true;
   }
 
   function smoke() {
@@ -819,6 +877,7 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
     cCloud.set(L.clouds.color);
     cFly.set(L.fireflies.color);
     densities();
+    if (world && world.wet) world.wet.update(dt, dC[K.rain]); // 황지: the page soaks and dries with the rain here
 
     fallers(K.leaves, L.leaves, S.leaves, C.leaves);
     fallers(K.snow, L.snow, S.snow, C.snow);
@@ -860,7 +919,7 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
     stats() { let em = 0; for (let e = 0; e < NE; e++) em += eOn[e];
       let lw = 0; let lb = 0; let lm = 0;
       for (let i = 0; i < NBITS; i++) { if (landT[i] === 1) lw++; else if (landT[i] === 2) lb++; if (landH[i] > 0.02) lm++; }
-      const land = { water: lw, blocked: lb, raised: lm, world: !!world }; return { bits: NBITS, soft: NSOFT, drawCalls: 2, triangles: NBITS * 4 + NSOFT * 2, chimneys: em, birdSprites: birdSprites ? birdSprites.length : 0, land }; },
+      const land = { water: lw, blocked: lb, raised: lm, world: !!world }; return { bits: NBITS, soft: NSOFT, drawCalls: 2, triangles: NBITS * 4 + NSOFT * 2, chimneys: em, birdSprites: birdSprites ? birdSprites.length : 0, flyers: Object.keys(flyRect).length, flocks: Array.from(fSp, (k) => (k >= 0 ? flyNames[k] : null)), land }; },
     dispose() {
       offRise(); offFlat(); offDespawn(); offLampRise(); offLampFlat(); offLampGone();
       paperUniforms.uPaperPoolCol.value.w = 0;

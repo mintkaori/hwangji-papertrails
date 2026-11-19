@@ -33,7 +33,15 @@ SHEETS = {
     'sheet_festival_b': ['fv_snowman', 'fv_maple_red', 'fv_ginkgo', 'fv_maple_orange'],
     'sheet_fish': ['fish_kumgang', 'fish_beodeul', 'fish_dukjung', 'fish_miyugi'],
     'sheet_birds': ['bird_dipper', 'bird_mandarin', 'bird_scops', 'bird_woodpecker'],
+    # birds in flight seen from above, for the sky flocks (life/life.js)
+    'sheet_birds_fly': ['fly_jay', 'fly_oriole', 'fly_mandarin', 'fly_kingfisher'],
+    # round 3: 황지동·상장동 places and the 황지연못 / spring avenue pieces
+    'sheet_hub_c': ['hj_market_gate', 'hj_mural_miner', 'hj_mural_family', 'hj_station_front'],
+    'sheet_hub_d': ['hj_signpost', 'hj_stone_bridge', 'hj_willow', 'hj_cherry'],
 }
+
+
+KEY_CLEAN = {'sheet_hub_c', 'sheet_hub_d'}
 
 
 def crop_alpha(im, pad=2):
@@ -72,6 +80,9 @@ def main():
                 continue
             sub = arr.copy()
             sub[:, :, 3] = np.where(quads[q], sub[:, :, 3], 0)
+            if sheet in KEY_CLEAN:  # stray magenta key pixels left inside an arch / between branches
+                r, gch, b = sub[:, :, 0].astype(int), sub[:, :, 1].astype(int), sub[:, :, 2].astype(int)
+                sub[:, :, 3] = np.where(((r > 165) & (b > 165) & (gch < 115)) | ((r > 150) & (b > 165) & (b > gch + 45)), 0, sub[:, :, 3])
             c, off = crop_alpha(Image.fromarray(sub))
             c.save(os.path.join(OUT, nm + '.png'))
             print(nm, c.size, 'from', sheet, 'offset', off)

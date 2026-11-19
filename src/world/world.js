@@ -15,10 +15,12 @@ import { rotToY, MODELS, FALLBACK_MODEL } from '../core/models.js';
 import { bus } from '../core/events.js';
 import { hash2f } from '../core/rng.js';
 import { createFoldInstance } from './fold.js';
-import { createBook, BIOME_TINT_GLSL, biomeTintUniforms, biomeIndexOf } from './book.js';
+import { createBook, BIOME_TINT_GLSL, biomeTintUniforms, biomeFoliageUniforms, biomeIndexOf, TINT_IDENTITY } from './book.js';
 import { biomeAt as biomeIdAt, biomeWeights, BIOMES } from '../core/biomes.js';
 import { state } from '../core/state.js';
 import { isThinned, hashStr } from './cards.js';
+import { createTerrain, TERRAIN_BATCH_VERTEX } from './terrain.js';
+import { createWet } from '../render/wet.js';
 // integration: V8's Math.hypot allocates (rest-argument array) on every call; this 2-argument form is allocation-free.
 const hypot2 = (a, b) => Math.sqrt(a * a + b * b);
 
@@ -81,7 +83,11 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
   const group = new THREE.Group();
   group.name = 'world';
   scene.add(group);
-  const book = createBook({ scene, assets, wfc, materials, quality });
+  // 황지: hills and slopes (world/terrain.js) - one height field for the page, the tile batches and heightAt
+  const terrain = createTerrain({ wfc });
+  // 황지: wet paper in the rain (render/wet.js): drop spots that dry, and a soak of the whole sheet
+  const wet = createWet();
+  const book = createBook({ scene, assets, wfc, materials, quality, terrain, wet });
 
   // ================================================================================================
   // Batches: one BatchedMesh per material
@@ -102,9 +108,10 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
 
   // biome tint state (used by createBatch below; see "biome pass: per-instance biome tint")
   const TINT = W.biomeTintEnabled !== false && !!W.biomeTint;
-  const OWN_ART = new Set(Object.keys(MODELS).filter((id) => { const b = MODELS[id].biomes; return b && Object.keys(b).length === 1 && !b.heartland; }));
+  // 황지: also the pinned-only hub cards (empty biome table): their art keeps its printed colours in the spring hub tint
+  const OWN_ART = new Set(Object.keys(MODELS).filter((id) => { const b = MODELS[id].biomes; return b && ((Object.keys(b).length === 1 && !b.heartland) || Object.keys(b).length === 0); }));
   const tintU = TINT ? biomeTintUniforms('prop') : null;
-  const tintUniforms = TINT ? { uBiomeP: { value: tintU.rows }, uBiomePK: { value: tintU.keep } } : null;
+  const tintUniforms = TINT ? { uBiomeP: { value: tintU.rows }, uBiomePK: { value: tintU.keep }, uBiomeF: { value: biomeFoliageUniforms('leaf') } } : null; // (leaf pieces: CONFIG.world.biomeTint[b].leaf)
 
   // ---- motion (biome pass): wind sway + windmill sails -------------------------------------------------
   // The sway itself lives in fold.js (fold.applyWind); here: per-tile wind strength from the biome blend, the
@@ -202,6 +209,29 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     const e = material.emissive;
     return !!(e && e.isColor && e.r + e.g + e.b > 0 && (material.emissiveIntensity === undefined || material.emissiveIntensity > 0));
   }
+  // 황지: every tile batch stands on the terrain (vertex lift in the colour pass and in the shadow pass)
+  function terrainMaterial(m) {
+    if (m.userData.terrain) return;
+    m.userData.terrain = true;
+    const prev = m.onBeforeCompile; const prevKey = m.customProgramCacheKey;
+    m.onBeforeCompile = (shader, renderer) => {
+      if (prev) prev.call(m, shader, renderer);
+      terrain.patch(shader, TERRAIN_BATCH_VERTEX);
+    };
+    m.customProgramCacheKey = () => (prevKey ? prevKey.call(m) : '') + '|terrain-v1';
+    m.needsUpdate = true;
+  }
+  // (kept on the material: batches are created while createWorld is still running, before later consts exist)
+  function terrainDepth(m) {
+    let d = m.userData.terrainDepth;
+    if (!d) {
+      d = new THREE.MeshDepthMaterial();
+      d.onBeforeCompile = (shader) => terrain.patch(shader, TERRAIN_BATCH_VERTEX);
+      d.customProgramCacheKey = () => 'terrain-depth-v1';
+      m.userData.terrainDepth = d;
+    }
+    return d;
+  }
   function tintMaterial(m) {
     if (m.userData.biomeTint) return;
     m.userData.biomeTint = true;
@@ -211,23 +241,25 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       if (prev) prev.call(m, shader, renderer);
       Object.assign(shader.uniforms, tintUniforms);
       // (three defines USE_BATCHING_COLOR only in the VERTEX stage: the varyings are unconditional and default to identity)
-      const pars = '\nvarying vec4 vBt0;\nvarying vec4 vBt1;\nvarying vec4 vBt2;\nvarying float vBtK;\n';
+      const pars = '\nvarying vec4 vBt0;\nvarying vec4 vBt1;\nvarying vec4 vBt2;\nvarying float vBtK;\nvarying vec4 vBtF;\n';
       const stock = 'vColor *= getBatchingColor( getIndirectIndex( gl_DrawID ) );';
       const mine = `{ int bi = clamp( int( getBatchingColor( getIndirectIndex( gl_DrawID ) ).r - 0.5 ), 0, ${NB - 1} );
-        vBt0 = uBiomeP[ bi * 3 ]; vBt1 = uBiomeP[ bi * 3 + 1 ]; vBt2 = uBiomeP[ bi * 3 + 2 ]; vBtK = uBiomePK[ bi ]; }`;
+        vBt0 = uBiomeP[ bi * 3 ]; vBt1 = uBiomeP[ bi * 3 + 1 ]; vBt2 = uBiomeP[ bi * 3 + 2 ]; vBtK = uBiomePK[ bi ]; vBtF = uBiomeF[ bi ] * step( 1.5, getBatchingColor( getIndirectIndex( gl_DrawID ) ).g ); }`;
       let vs = shader.vertexShader;
       if (!vs.includes(stock)) vs = vs.replace('#include <color_vertex>', THREE.ShaderChunk.color_vertex);
       if (!vs.includes(stock)) { console.warn('[world] biome tint hook not applied (unexpected shader)'); return; }
       shader.vertexShader = vs.replace(stock, mine)
-        .replace('void main() {', 'void main() {\n\tvBt0 = vec4( 1.0, 0.0, 0.0, 0.0 ); vBt1 = vec4( 0.0, 1.0, 0.0, 0.0 ); vBt2 = vec4( 0.0, 0.0, 1.0, 0.0 ); vBtK = 0.0;')
-        .replace('#include <common>', `#include <common>${pars}#ifdef USE_BATCHING_COLOR\nuniform vec4 uBiomeP[${NB * 3}];\nuniform float uBiomePK[${NB}];\n#endif\n`);
-      const apply = '\ndiffuseColor.rgb = biomeTint( diffuseColor.rgb, vBt0, vBt1, vBt2, vBtK );\n';
+        .replace('void main() {', 'void main() {\n\tvBt0 = vec4( 1.0, 0.0, 0.0, 0.0 ); vBt1 = vec4( 0.0, 1.0, 0.0, 0.0 ); vBt2 = vec4( 0.0, 0.0, 1.0, 0.0 ); vBtK = 0.0; vBtF = vec4( 0.0 );')
+        .replace('#include <common>', `#include <common>${pars}#ifdef USE_BATCHING_COLOR\nuniform vec4 uBiomeP[${NB * 3}];\nuniform float uBiomePK[${NB}];\nuniform vec4 uBiomeF[${NB}];\n#endif\n`);
+      const apply = '\ndiffuseColor.rgb = foliageShift( biomeTint( diffuseColor.rgb, vBt0, vBt1, vBt2, vBtK ), vBtF );\n';
+      // 황지: wet paper - drop spots on the faces that look up, the soak on every face
+      const applyWet = '\ndiffuseColor.rgb = wetPaper( foliageShift( biomeTint( diffuseColor.rgb, vBt0, vBt1, vBt2, vBtK ), vBtF ), wetAt( vPaperW.xz, smoothstep( 0.55, 0.9, vPaperNrm.y ) ) );\n';
       let fs = shader.fragmentShader.replace('#include <common>', '#include <common>' + pars + BIOME_TINT_GLSL);
       const anchor = 'vec3 paperAN = abs( vPaperNrm );'; // right after the art print of the paper material, before fibre
-      fs = fs.includes(anchor) ? fs.replace(anchor, apply + anchor) : fs.replace('#include <color_fragment>', '#include <color_fragment>' + apply);
+      if (fs.includes(anchor)) { fs = fs.replace(anchor, applyWet + anchor); shader.fragmentShader = fs; wet.patch(shader); fs = shader.fragmentShader; } else fs = fs.replace('#include <color_fragment>', '#include <color_fragment>' + apply);
       shader.fragmentShader = fs;
     };
-    m.customProgramCacheKey = () => (prevKey ? prevKey.call(m) : '') + '|biome-tint-v2';
+    m.customProgramCacheKey = () => (prevKey ? prevKey.call(m) : '') + '|biome-tint-v7-wet';
     m.needsUpdate = true;
   }
 
@@ -255,6 +287,7 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     mesh.frustumCulled = false;
     const b = { mesh, material, geoIds: new Map(), spec, verts: Math.max(verts, 64) + 256, indices: Math.max(indices, 64) + 512, usedV: 0, usedI: 0, instances: 0, tinted: TINT && !isGlow(material) };
     if (b.tinted) tintMaterial(material);
+    if (terrain.enabled) { terrainMaterial(material); mesh.customDepthMaterial = terrainDepth(material); }
     batches.set(material.uuid, b);
     batchList.push(b);
     batchRoot.add(mesh);
@@ -273,6 +306,8 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       b.indices = Math.max(b.indices * 2, b.usedI + ni);
       b.mesh.setGeometrySize(b.verts, b.indices);
     }
+    // the terrain lifts vertices in the shader: pad the culling sphere so a raised tile is not culled at the frame edge
+    if (terrain.enabled) { if (!ng.boundingSphere) ng.computeBoundingSphere(); ng.boundingSphere.radius += 1.4; }
     id = b.mesh.addGeometry(ng);
     b.usedV += nv; b.usedI += ni;
     b.geoIds.set(geometry.uuid, id);
@@ -660,11 +695,12 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     created++;
     // fixer (biome pass): piece class per instance, for the per-biome prop allowlist (see cullFor)
     // bit 0-1: 1 = heartland-only prop (tree / flowers / haystack / scarecrow / hedge), 2 = fence, 3 = thin filler (bush / tuft); bits 2+: prop group
-    let cls = null; let bushy = null; let keep = null;
+    let cls = null; let bushy = null; let keep = null; let leafy = null;
     if (!OWN_ART.has(model)) {
       cls = new Uint8Array(meshes.length);
       bushy = new Uint8Array(meshes.length);
       keep = new Uint8Array(meshes.length);
+      leafy = new Uint8Array(meshes.length); // 황지: leaves only (trees, pines, bushes, tufts) take the season's leaf colour
       const groups = [];
       for (let i = 0; i < meshes.length; i++) {
         let c = 0; let base = '';
@@ -673,6 +709,7 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
           c = PIECE_CLASS(base);
         }
         if (KEEP_TINT_RX.test(base) || KEEP_TINT_RX.test(String(meshes[i].name || '').replace(/^.*__/, ''))) keep[i] = 1;
+        else if (LEAFY_RX.test(base)) leafy[i] = 1;
         if (!c) continue;
         if (c === 3 && /^bush/.test(base)) bushy[i] = 1;
         if ((model === 'meadow' && /^haystack/.test(base)) || (model === 'meadow_flowers' && /^beehive/.test(base))) bushy[i] = 2; // integrator: thinned per cell (hayHidden)
@@ -689,7 +726,7 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       room = new Float32Array(meshes.length); roomH = new Float32Array(meshes.length); roomW = new Float32Array(meshes.length);
       for (let i = 0; i < meshes.length; i++) { const d = sp.card[i] !== null ? dims.get(sp.card[i]) : undefined; if (d) { roomH[i] = d[0]; roomW[i] = d[1]; } }
     }
-    return { card: sp.card, cardS: sp.cardS, cardJ: sp.cardJ, cardP: sp.cardP, thin: sp.thin, thinAny: sp.thinAny, room, roomH, roomW, roomOn: false, cls, bushy, keep, hide: null, key: '', cx: 0, cz: 0, cell: null, group: g, fold, info, model, meshes, inst, shown: false, pending: false, guard: false, held: 0, timer: 0, dirty: false, index: -1, flipAt: -1e9, biome: 0, swayIdx: Int16Array.from(swayIdx), spins, wind: 1, cy: 1, sy: 0 };
+    return { card: sp.card, cardS: sp.cardS, cardJ: sp.cardJ, cardP: sp.cardP, thin: sp.thin, thinAny: sp.thinAny, room, roomH, roomW, roomOn: false, cls, bushy, keep, leafy, hide: null, key: '', cx: 0, cz: 0, cell: null, group: g, fold, info, model, meshes, inst, shown: false, pending: false, guard: false, held: 0, timer: 0, dirty: false, index: -1, flipAt: -1e9, biome: -1, swayIdx: Int16Array.from(swayIdx), spins, wind: 1, cy: 1, sy: 0 };
   }
 
   /**
@@ -866,7 +903,9 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
    * fences); outside heartland half of the small bush / tuft cards are dropped per cell (seeded) so they stop reading as
    * an even scatter. Heartland is untouched. Only the stand-up is hidden: the print on the page and the walk field stay.
    */
-  const KEEP_TINT_RX = /^(reeds?|rock|boulder|stone|crag|haystack|fence|roof|log|well|bridge|ramp|side_|post|lantern|sign)/;
+  // (황지: + the buildings and yard things, so the spring leaf shift of the hub never greens a roof or a cart)
+  const LEAFY_RX = /^(tree|pine|bush|tuft|hedge|grove|shrub)/;
+  const KEEP_TINT_RX = /^(reeds?|rock|boulder|stone|crag|haystack|fence|roof|log|well|bridge|ramp|side_|post|lantern|sign|house|cottage|manor|barrels?|cart|crates?|beehive|woodpile|laundry|bench|lamp|bed_)/;
   /** integrator: the meadow model carries a hay rick and meadow_flowers a beehive; each stands on about 4 of its cells in 10 so meadows stop repeating like wallpaper. */
   const hayHidden = (cx, cz) => ((Math.imul(cx * 73856093 ^ cz * 19349663 ^ 0x5bd1e995, 2654435761) >>> 9) % 100) < (W.hayDrop ?? 60);
   function cullFor(rec, cell, cx, cz) {
@@ -930,14 +969,20 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       rec.wind = s;
     }
     // integrator (biome pass): single-biome tiles carry art drawn in their biome's colours - no prop tint on top
-    const bi = OWN_ART.has(rec.model) && W.biomeTintOwnArt !== true ? 0 : biomeIndexOf(cell);
+    // (황지: the identity is its own slot now, since heartland - the spring hub - carries a tint)
+    const bi = OWN_ART.has(rec.model) && W.biomeTintOwnArt !== true ? TINT_IDENTITY : biomeIndexOf(cell);
     if (bi !== rec.biome) { // pooled records keep their instances: re-colour only when the biome changes
       rec.biome = bi;
       _tintCol.setRGB(1 + bi, 1, 1);
       const sel = rec.keep !== null && W.biomeTintKeep && W.biomeTintKeep[BIOMES[bi]] === true; // selective tint: reeds stay green, rocks grey, roofs red
       for (let i = 0; i < rec.inst.length; i++) {
         if (!rec.inst[i].b.tinted) continue;
-        if (sel && rec.keep[i] === 1) { _tintCol.setRGB(1, 1, 1); rec.inst[i].b.mesh.setColorAt(rec.inst[i].id, _tintCol); _tintCol.setRGB(1 + bi, 1, 1); } else rec.inst[i].b.mesh.setColorAt(rec.inst[i].id, _tintCol);
+        if (sel && rec.keep[i] === 1) { _tintCol.setRGB(1 + TINT_IDENTITY, 1, 1); rec.inst[i].b.mesh.setColorAt(rec.inst[i].id, _tintCol); _tintCol.setRGB(1 + bi, 1, 1); } else {
+          // (g = 2: a leaf piece - the shader applies the season's leaf shift to it and to nothing else)
+          _tintCol.g = rec.leafy && rec.leafy[i] === 1 ? 2 : 1;
+          rec.inst[i].b.mesh.setColorAt(rec.inst[i].id, _tintCol);
+          _tintCol.g = 1;
+        }
       }
     }
     cullFor(rec, cell, cx, cz);
@@ -1263,6 +1308,7 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     tileRecord: lookup,
     /** Stream tiles around the traveller and advance every fold spring. */
     update(dt, travellerPos, moveDir) {
+      terrain.update(travellerPos);
       const jump = !last.valid || hypot2(travellerPos.x - last.px, travellerPos.z - last.pz) > 1.5;
       last.px = travellerPos.x; last.pz = travellerPos.z; last.valid = true;
       // Grace area: the streaming anchor trails the traveller on a "rope" of length graceRadius. Small moves and
@@ -1402,11 +1448,15 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     clearance: clearanceAt,
     /** Debug: [mesh name, top, 'T' tall | 'L' low | '-' walk-through] of a model (CONFIG.world.debugPieces !== false). */
     debugPieces(model) { return dataFor(model).pieces || []; },
-    /** Ground height (world Y) under (x,z): 0 on the page, raised on a bridge deck, slightly below 0 in the gutter. */
+    /** 황지: the hills (world/terrain.js): heightAt, hillAt, stats. */
+    terrain,
+    /** 황지: wet paper (render/wet.js): drop(x, z), update(dt, rain), soak. */
+    wet,
+    /** Ground height (world Y) under (x,z): 0 on the page, raised on a bridge deck and on the hills, slightly below 0 in the gutter. */
     heightAt(x, z) {
       const cx = Math.round(x / TILE_SIZE); const cz = Math.round(z / TILE_SIZE);
       const cell = cellAt(cx, cz);
-      let h = book.gutterDip(x, z);
+      let h = book.gutterDip(x, z) + terrain.heightAt(x, z);
       const md = dataFor(cell.model);
       if (md.deck !== null) {
         let u = x - cx * TILE_SIZE; let v = z - cz * TILE_SIZE;

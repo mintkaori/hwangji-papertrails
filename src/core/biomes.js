@@ -1,14 +1,14 @@
 // FROZEN contract (owner: orchestrator): which BIOME a cell belongs to. Pure, deterministic, allocation-free
 // lookups shared by the WFC (tile choice), the world, weather / ambient life and the grade.
 //
-// 황지 페이퍼트레일 - the year as wide rings: the start is the 황지 neighbourhood (heartland, autumn colours); around it
-// the seasons run outward in wide, wobbly rings, so a straight walk in ANY direction slowly passes through a whole
-// Taebaek year and starts over:
-//   heartland  황지 생활권 (the hub, radius SEASON_HUB)       가을   (leaves drifting)
-//   snow       태백산 눈꽃 능선, 천제단, 눈축제                  겨울   (snowfall, blizzards)
-//   blossom    금대봉 야생화, 검룡소, 철쭉제                    봄     (petals, butterflies, spring rain)
+// 황지 페이퍼트레일 - the year as wide rings: the start is the 황지동·상장동 neighbourhood in spring (heartland);
+// around it the seasons run outward in wide, wobbly rings in the order of the year, so a straight walk in ANY
+// direction slowly passes through a whole Taebaek year and starts over:
+//   heartland  황지동·상장동 (the hub, radius SEASON_HUB)      봄     (petals, butterflies, spring rain)
 //   desert     매봉산 바람의 언덕, 배추밭, 해바라기 축제          여름   (wind, showers, sea of clouds)
 //   pinewood   철암 탄광촌, 단풍 군락, 구문소                   가을   (falling maple leaves, fog)
+//   snow       태백산 눈꽃 능선, 천제단, 눈축제                  겨울   (snowfall, blizzards)
+//   blossom    금대봉 야생화, 검룡소, 철쭉제                    봄     (petals, butterflies, spring rain)
 // Each ring is SEASON_BAND tiles wide; the borders wobble by a few tiles and cross-fade (biomeWeights).
 
 export const BIOMES = ['heartland', 'desert', 'snow', 'blossom', 'pinewood'];
@@ -18,11 +18,11 @@ export const BIOME_SITE = 11;
 /** Radius (tiles) of the 황지 hub and width (tiles) of one season ring. */
 export const SEASON_HUB = 11;
 export const SEASON_BAND = 16;
-/** Biome index of ring k (k = 0 is the first ring outside the hub): winter, spring, summer, autumn, winter ... */
-const RING = [2, 3, 1, 4];
+/** Biome index of ring k (k = 0 is the first ring outside the hub): summer, autumn, winter, spring, summer ... */
+const RING = [1, 4, 2, 3];
 /** Season of each biome (Korean, for the UI) and the place it stands for. */
-export const SEASON_OF = { heartland: '가을', desert: '여름', snow: '겨울', blossom: '봄', pinewood: '가을' };
-export const PLACE_OF = { heartland: '황지 우리 동네', desert: '매봉산 바람의 언덕', snow: '태백산 눈꽃 능선', blossom: '금대봉 야생화 동산', pinewood: '철암 단풍 마을' };
+export const SEASON_OF = { heartland: '봄', desert: '여름', snow: '겨울', blossom: '봄', pinewood: '가을' };
+export const PLACE_OF = { heartland: '황지동·상장동 우리 동네', desert: '매봉산 바람의 언덕', snow: '태백산 눈꽃 능선', blossom: '금대봉 야생화 동산', pinewood: '철암 단풍 마을' };
 
 function h2(seed, x, y, k) {
   let h = (Math.imul(x | 0, 0x9e3779b1) ^ Math.imul(y | 0, 0x85ebca6b) ^ Math.imul((seed | 0) + k * 0x632be5ab, 0xc2b2ae35)) >>> 0;

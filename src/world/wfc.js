@@ -286,13 +286,21 @@ function applyPath(mask) {
 // River: west border -> past the house -> under the bridge -> east border.
 const ORIGIN_ROAD = [[1, 3], [1, 2], [1, 1], [0, 1], [0, 0], [0, -1], [0, -2], [0, -3], [1, -3], [1, -4]];
 const ORIGIN_RIVER = [[-3, -3], [-2, -3], [-2, -2], [-1, -2], [0, -2], [1, -2], [2, -2], [2, -3], [3, -3], [4, -3]];
+// 황지 페이퍼트레일 (round 3): the 황지동·상장동 neighbourhood is laid out by hand so the ways out read at a glance -
+// the north-south trunk road through the start (bridge over the 황지천 to the north) and a cherry-blossom avenue running
+// east-west one row south of it, crossing at a signposted junction. 황지동 (east): the wide 황지연못 over two cells,
+// 다이소, the claw shop, 태백역 and 황지자유시장 on the avenue; 상장동 (west): the 탄광이야기 마을 mural walls, the
+// school and the library. Everything here faces the default camera.
+const ORIGIN_ROAD_W = [[-3, 1], [-2, 1], [-1, 1], [0, 1]];
+const ORIGIN_ROAD_E = [[1, 1], [2, 1], [3, 1], [4, 1]];
 const ORIGIN_FIXED = [[0, 0, 'lantern_post:1010'], [-1, -1, 'house:0100'], [0, -1, 'path_t:1011'],
-  // 황지 페이퍼트레일: the neighbourhood the students walk every day, around the first steps of the road (all facing
-  // the default camera): school + playground west of the start, 황지연못 east with 다이소 across from it and the claw
-  // shop next door, the library on the far side of the house lane.
-  [-1, 0, 'hj_school:0000'], [-1, 1, 'hj_playground:0000'], [1, 0, 'hj_pond:0000'], [1, -1, 'hj_daiso:0000'],
-  [2, -1, 'hj_claw:0000'], [-2, -1, 'hj_library:0000'],
-  // round 2: the 황부자 legend trail on the straight just south-east of the start
+  [-1, 0, 'hj_school:0000'], [1, 0, 'hj_pond:0000'], [2, 0, 'hj_pond_b:0000'], [1, -1, 'hj_daiso:0000'],
+  [2, -1, 'hj_claw:0000'], [-2, -1, 'hj_library:0000'], [3, -1, 'hj_station:0000'], [3, 0, 'hj_market:0000'],
+  [-3, 0, 'hj_mural_a:0000'], [-2, 0, 'hj_mural_b:0000'], [-1, 2, 'hj_playground:0000'],
+  // the avenue and its two junctions (the signpost stands on the west one, just south of the start)
+  [-3, 1, 'hj_avenue:0101'], [-2, 1, 'hj_avenue:0101'], [-1, 1, 'hj_avenue:0101'], [0, 1, 'hj_junction:1101'],
+  [1, 1, 'path_t:0111'], [2, 1, 'hj_avenue:0101'], [3, 1, 'hj_avenue:0101'], [4, 1, 'hj_avenue:0101'],
+  // round 2: the 황부자 legend trail on the trunk just south-east of the start
   [1, 2, 'lg_hwangbuja:1010']];
 /** Pinned-only tiles: zero weight everywhere (empty biome table), so they skip the domain check below. */
 const PIN_ONLY = /^hj_/;
@@ -360,13 +368,13 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
   const roadChoice = (cx, cz) => (isStartCol(cx, cz) ? 0 : hash2(cx, cz, seed + 931) & 1); // 0 = north, 1 = east
   const roadExtra = (cx, cz) => !isStartCol(cx, cz) && u01(cx, cz, 933) < cfg.roadExtra;
   const roadH = (kx, kz) => roadChoice(kx, kz) === 0 || roadExtra(kx, kz);
-  const roadV = (kx, kz) => !((kx === 0 || kx === 1) && kz === 0) && (roadChoice(kx - 1, kz) === 1 || roadExtra(kx - 1, kz));
+  const roadV = (kx, kz) => ((kx === 0 || kx === 1) && kz === 0) || (roadChoice(kx - 1, kz) === 1 || roadExtra(kx - 1, kz)); // 황지: the avenue leaves the start chunk west and east
   function roadPos(p, hasRiver, q) {
     if (hasRiver && Math.abs(p - q) < 2) p = q + 2 <= N - 2 ? q + 2 : q - 2;
     return p;
   }
   const roadPosH = (kx, kz) => (kx === 0 && (kz === 0 || kz === 1) ? 1 + OX : roadPos(1 + (hash2(kx, kz, seed + 941) % (N - 2)), riverH(kx, kz), riverPosH(kx, kz)));
-  const roadPosV = (kx, kz) => roadPos(1 + (hash2(kx, kz, seed + 943) % (N - 2)), riverV(kx, kz), riverPosV(kx, kz));
+  const roadPosV = (kx, kz) => ((kx === 0 || kx === 1) && kz === 0 ? 1 + OZ : roadPos(1 + (hash2(kx, kz, seed + 943) % (N - 2)), riverV(kx, kz), riverPosV(kx, kz)));
 
   /** Border crossings of a chunk: [{ cell, out }] for rivers and roads (order n, e, s, w). */
   function crossings(cx, cz) {
@@ -386,6 +394,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
   // ------------------------------------------------------------ planner
   let hub = -1;
   let originChunk = false; // integrator (round 3): computeWeights() boosts hamlets / ponds around the start cell
+  let tidy = 0; // 황지: 1 in the start chunk, 0.5 in the ring around it, 0 beyond (computeWeights)
   function fillCost(rng, amp, ringPenalty) {
     for (let i = 0; i < NN; i++) {
       const x = i % N;
@@ -434,6 +443,8 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
       };
       set(ORIGIN_RIVER, rivMask);
       set(ORIGIN_ROAD, trunkMask);
+      set(ORIGIN_ROAD_W, trunkMask);
+      set(ORIGIN_ROAD_E, trunkMask);
       for (const r of rivers) rivMask[r.cell] |= BIT[r.out];
       for (const r of roads) trunkMask[r.cell] |= BIT[r.out];
     } else {
@@ -709,7 +720,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
         if ((trunkMask[i] & through) !== through) continue;
         const total = 1 + runLen[i * 4 + d] + runLen[i * 4 + d + 2];
         const lim = runEdge[i * 4 + d] || runEdge[i * 4 + d + 2] ? cfg.maxBorderRun : cfg.maxInnerRun;
-        if (total > lim) return false;
+        if (total > lim && !isOrigin) return false; // (황지: the start chunk's avenue runs straight across on purpose)
       }
     }
     return true;
@@ -795,6 +806,12 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
               if (total > (runEdge[i * 4 + d] || runEdge[i * 4 + d + 2] ? cfg.maxBorderRun : cfg.maxInnerRun)) w = 0;
             }
           }
+        }
+        // 황지: the start neighbourhood is tidy (lawns and flower beds, few woods / rocks / hill cards), the ring of
+        // chunks around it half way, and from there on the world is as wild as it likes
+        if (tidy > 0 && IS_FILLER[t]) {
+          const f = t === T.forest || NEW_KIND[t] === 1 ? 0.06 : t === T.rocks || t === T.hills ? 0.15 : t === T.grove ? 0.35 : t === T.meadow_flowers ? 1.8 : t === T.meadow ? 1.4 : 1;
+          w *= 1 + (f - 1) * tidy;
         }
         W[base + o] = w;
         WL[base + o] = w > 0 ? w * Math.log(w) : 0;
@@ -1100,9 +1117,9 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
       if (PATH_BITS[res[i]] && !seen[i]) { stats.vOrphan++; return false; }
       if (OPT_T[res[i]] === T.path_end) ends++;
     }
-    if (ends > 1 || (!any && ends > 0)) { stats.vEnds++; return false; }
-    // 2. straight runs of path / river (cells crossed straight through), per axis
-    for (let axis = 0; axis < 2; axis++) {
+    if (!originChunk && (ends > 1 || (!any && ends > 0))) { stats.vEnds++; return false; } // (황지: the hand-laid start chunk may end a lane or two)
+    // 2. straight runs of path / river (cells crossed straight through), per axis (황지: not in the hand-laid start chunk)
+    for (let axis = 0; axis < (originChunk ? 0 : 2); axis++) {
       const dA = axis === 0 ? 0 : 3; // n / w side
       const dB = axis === 0 ? 2 : 1; // s / e side
       for (let s = 1; s <= 2; s++) {
@@ -1137,6 +1154,7 @@ export function createWFC({ seed = 1, _weights = null, _fault = 0 } = {}) {
   function generate(cx, cz) {
     const isOrigin = cx === 0 && cz === 0;
     originChunk = isOrigin;
+    tidy = isOrigin ? 1 : Math.max(Math.abs(cx), Math.abs(cz)) === 1 ? 0.5 : 0;
     const X = crossings(cx, cz);
     computeFields(cx, cz);
     let done = false;

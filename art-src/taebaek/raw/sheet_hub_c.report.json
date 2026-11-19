@@ -1,0 +1,59 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Layout: a sprite sheet of exactly four separate items arranged in a 2 by 2 grid, one item per quadrant, each item centred in its quadrant and fully visible with generous empty space between items, nothing touching or overlapping, every item is its own separate die-cut sticker.\nItems (each seen from the front):\n1 top-left: the entrance gate of a Korean traditional town market: a wide gentle arch of pale wood and teal painted steel over a small street, a long blank cream signboard across the top of the arch, red paper lanterns hanging under it, small fruit and vegetable stalls with striped awnings on both sides.\n2 top-right: a low painted village wall of a former coal-mining town: a cheerful mural painted on the wall shows a smiling coal miner in a yellow helmet with a headlamp holding a round metal lunch box, a small black mine cart full of coal and a neat stack of black coal briquettes.\n3 bottom-left: a second low painted village wall with a warm mural: a coal miner father in work clothes walking home under the stars hand in hand with two small children, little houses on a hillside behind them.\n4 bottom-right: a small Korean mountain-town railway station building: two storeys, pale grey walls, a dark blue tiled roof, a round clock, glass doors, a long blank cream signboard above the entrance.\nStyle: match the attached reference sheet exactly - handcrafted layered paper and felt cut-out illustration made for a pop-up storybook, visible paper fibre texture, soft gouache print shading, warm muted vintage palette (cream, ochre, terracotta, sage, slate blue), a clean die-cut silhouette with a thin even cream paper border all around the outline, flat front-facing orthographic elevation with no perspective, no cast shadow, no ground plane, no text, no letters, no numbers, no logos.\n\nThe entire background is one perfectly flat, uniform pure magenta chroma-key fill (#FF00FF) with no gradient, no texture, no shadow and no ground line.",
+  "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_hub_c.png",
+  "raw": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_hub_c.png.raw.png",
+  "raw_bytes": 2132325,
+  "elapsed_seconds": 60.598,
+  "model": null,
+  "session_id": "01a1f5b9-a476-76a1-8296-1b16b46d546e",
+  "refs": [
+    "F:\\Project\\papertrails\\art-src\\taebaek\\ref\\style_ref.png"
+  ],
+  "transparent": true,
+  "alpha": {
+    "strategy": "chroma",
+    "strategy_source": "refs-attached",
+    "key_background": {
+      "injected": true,
+      "key": "magenta"
+    },
+    "raw_alpha": {
+      "mode": "RGB",
+      "has_alpha_band": false,
+      "verdict": "no-alpha",
+      "alpha_zero_pct": 0.0,
+      "border_alpha_zero_pct": 0.0
+    },
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_hub_c.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 779706,
+    "fringe_pixels": 1251,
+    "cleaned_transparent_rgb_pixels": 5270,
+    "alpha_zero_pct": 49.58,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "chroma": {
+    "out": "F:\\Project\\papertrails\\art-src\\taebaek\\raw\\sheet_hub_c.png",
+    "mode": "RGBA",
+    "method": "ycbcr",
+    "size": "1254x1254",
+    "key": "magenta",
+    "keyed_pixels": 779706,
+    "fringe_pixels": 1251,
+    "cleaned_transparent_rgb_pixels": 5270,
+    "alpha_zero_pct": 49.58,
+    "stale_transparent_rgb_pixels": 0
+  },
+  "extra": {
+    "auth_source": "codex-login",
+    "inline_results": 1,
+    "rollout_cleaned": true,
+    "transparent_background_reported": false
+  },
+  "provider_resolved_from": "explicit"
+}

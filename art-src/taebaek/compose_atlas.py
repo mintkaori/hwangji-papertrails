@@ -75,6 +75,18 @@ ITEMS_SPEC = {
     # ---- stream fish (the leaping fish of life/fish.js; an_lenok = 열목어)
     'fish_kumgang': (170, 'kit_fish', []), 'fish_beodeul': (170, 'kit_fish', []), 'fish_dukjung': (170, 'kit_fish', []),
     'fish_miyugi': (190, 'kit_fish', []),
+    # ---- birds in flight seen from above (the sky flocks of life/life.js crease the card on the body to flap)
+    'fly_jay': (150, 'kit_flyer', []), 'fly_oriole': (150, 'kit_flyer', []), 'fly_mandarin': (150, 'kit_flyer', []),
+    'fly_kingfisher': (150, 'kit_flyer', []),
+    # ---- round 3: 황지동·상장동 laid out around the start (world/wfc.js ORIGIN_FIXED), the spring avenue and 황지연못
+    'hj_market_gate': (300, 'kit_facade', [((104, 107, 425, 163), ['황지자유시장'], F_JUA, '#8a3a22')]),
+    'hj_mural_miner': (300, 'kit_prop', []), 'hj_mural_family': (300, 'kit_prop', []),
+    'hj_station_front': (300, 'kit_facade', [((151, 243, 424, 287), ['태백역'], F_JUA, '#2f4a6a')]),
+    'hj_signpost': (230, 'kit_prop', [
+        ((40, 124, 150, 184), ['상장동', '벽화마을'], F_JUA, '#5b3a26'), ((206, 216, 318, 284), ['황지연못'], F_JUA, '#5b3a26'),
+        ((36, 314, 150, 376), ['황지', '중앙초'], F_JUA, '#5b3a26'), ((206, 414, 318, 478), ['자유시장', '태백역'], F_JUA, '#5b3a26'),
+        ((145, 32, 210, 78), ['황지'], F_JUA, '#5b3a26')]),
+    'hj_stone_bridge': (220, 'kit_prop', []), 'hj_willow': (240, 'kit_tree', []), 'hj_cherry': (240, 'kit_tree', []),
 }
 
 
@@ -171,6 +183,18 @@ def centre_on_hub(im):
     return out
 
 
+def centre_on_body(im):
+    """Birds in flight (seen from above): pad the sides so the body - the columns with the longest head-to-tail
+    run of paper - sits on the vertical centre line, where life.js creases the card to flap the wings."""
+    a = np.asarray(im)[:, :, 3] > 8
+    cols = ndimage.uniform_filter1d(a.sum(axis=0).astype(np.float64), size=max(3, im.width // 25))
+    cx = int(round(np.nonzero(cols >= cols.max() * 0.97)[0].mean()))
+    half = max(cx, im.width - cx)
+    out = Image.new('RGBA', (2 * half, im.height), (0, 0, 0, 0))
+    out.paste(im, (half - cx, 0))
+    return out
+
+
 def tone(arr):
     a = arr[:, :, 3] > 200
     c = arr[:, :, :3][a].mean(axis=0) if a.any() else np.array([200, 180, 150])
@@ -194,6 +218,8 @@ def main():
             im = print_sign(im, box, lines, fname, col)
         if kind == 'kit_sails':
             im = centre_on_hub(im)
+        elif kind == 'kit_flyer':
+            im = centre_on_body(im)
         lettered.append((name, kind, tw, im))
 
     # shelf packing, tallest first; when the strip is too small every sprite shrinks a little and we try again

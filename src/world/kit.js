@@ -39,10 +39,51 @@ export const KIT = {
     { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.36, x: 0.78, z: 0.1 },
     { s: 'hj_forsythia', name: 'bush_forsythia_b', w: 0.34, x: -0.82, z: 0.8 },
   ] },
-  hj_pond: { donor: 'pond', keep: /^(tuft|flowers|reeds|rock)/, cards: [
-    { s: 'hj_statue', name: 'statue_daughter', w: 0.3, x: 0.62, z: -0.62 },
-    { s: 'hj_stone', name: 'sign_stone', w: 0.36, x: -0.66, z: 0.62 },
-    { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.42, x: -0.74, z: -0.58 },
+  // 황지연못 (round 3: wide, over two cells): 상지 here - its water runs on east into 중지 (hj_pond_b); CONFIG.world.ponds
+  hj_pond: { donor: 'pond', keep: /^(reeds|rock)/, cards: [
+    { s: 'hj_statue', name: 'statue_daughter', w: 0.28, x: -0.8, z: -0.6 },
+    { s: 'hj_stone', name: 'sign_stone', w: 0.34, x: -0.8, z: 0.64 },
+    { s: 'hj_willow', name: 'tree_willow', w: 0.5, x: -0.8, z: 0.02 },
+  ] },
+  hj_pond_b: { donor: 'meadow', keep: /^(tuft)/, cards: [
+    { s: 'hj_stone_bridge', name: 'bench_bridge', w: 0.74, x: -0.52, z: 0.76 },
+    { s: 'hj_willow', name: 'tree_willow', w: 0.6, x: 0.6, z: -0.52 },
+    { s: 'hj_cherry', name: 'tree_cherry', w: 0.56, x: 0.64, z: 0.56 },
+    { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.34, x: 0.12, z: -0.84 },
+  ] },
+  hj_market: { donor: 'meadow', keep: MEADOW_FILL, cards: [
+    { s: 'hj_market_gate', name: 'market_front', w: 1.5, x: 0, z: -0.12 },
+    { s: 'hj_cherry', name: 'tree_cherry', w: 0.48, x: -0.8, z: 0.5 },
+    { s: 'bench_0', name: 'bench_a', w: 0.38, x: 0.7, z: 0.62 },
+  ] },
+  hj_station: { donor: 'meadow', keep: MEADOW_FILL, cards: [
+    { s: 'hj_station_front', name: 'station_front', w: 1.6, x: 0, z: -0.28, walls: 0.32, fold: 'back' },
+    { s: 'bench_0', name: 'bench_a', w: 0.4, x: -0.62, z: 0.56 },
+    { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.38, x: 0.7, z: 0.56 },
+  ] },
+  // 상장동 탄광이야기 마을: painted walls of the old miners' houses
+  hj_mural_a: { donor: 'meadow', keep: /^(tuft|flowers)/, cards: [
+    { s: 'hj_mural_miner', name: 'mural_front', w: 1.7, x: 0, z: -0.16 },
+    { s: 'ch_briquettes', name: 'stone_a_briquettes', w: 0.34, x: 0.72, z: 0.6 },
+    { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.36, x: -0.72, z: 0.6 },
+  ] },
+  hj_mural_b: { donor: 'meadow', keep: /^(tuft|flowers)/, cards: [
+    { s: 'hj_mural_family', name: 'mural_front', w: 1.7, x: 0, z: -0.16 },
+    { s: 'ch_cart', name: 'cart_coal', w: 0.42, x: -0.66, z: 0.6 },
+    { s: 'gd_azalea', name: 'bush_azalea', w: 0.4, x: 0.7, z: 0.6 },
+  ] },
+  // the cherry-blossom avenue (E-W: the donor road turned a quarter) - blossoms behind it, only low shrubs in front
+  hj_avenue: { donor: 'path_straight', rot: 1, keep: /^(tuft)/, cards: [
+    { s: 'hj_cherry', name: 'tree_cherry_a', w: 0.62, x: -0.5, z: -0.62 },
+    { s: 'hj_cherry', name: 'tree_cherry_b', w: 0.58, x: 0.52, z: -0.66 },
+    { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.38, x: 0.02, z: 0.7 },
+  ] },
+  // the junction just south of the start (arms N, E, W: the donor T turned round) with the signpost
+  hj_junction: { donor: 'path_t', rot: 2, keep: /^(tuft)/, cards: [
+    { s: 'hj_signpost', name: 'sign_post_hub', w: 0.5, x: -0.52, z: 0.66 },
+    { s: 'hj_cherry', name: 'tree_cherry_a', w: 0.56, x: -0.64, z: -0.64 },
+    { s: 'hj_cherry', name: 'tree_cherry_b', w: 0.52, x: 0.64, z: -0.66 },
+    { s: 'hj_forsythia', name: 'bush_forsythia', w: 0.38, x: 0.6, z: 0.68 },
   ] },
   hj_daiso: { donor: 'meadow', keep: MEADOW_FILL, cards: [
     { s: 'daiso_front', name: 'daiso_front', w: 1.7, x: 0, z: -0.3, walls: 0.32, fold: 'back' },
@@ -318,10 +359,13 @@ export function buildKitTiles({ atlas, paper, donor }) {
       g.name = id;
       g.userData.model = id;
       let top = -1;
+      const turn = r.rot ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (r.rot * Math.PI) / 2) : null;
       for (const c of d.children) {
         const nm = String(c.name || '');
         if (nm === 'base' || (r.keep && r.keep.test(nm))) {
           const k = c.clone(true);
+          // round 3: rot = quarter turns of the donor (an east-west avenue from the north-south road ...)
+          if (turn) { k.position.applyQuaternion(turn); k.quaternion.premultiply(turn); }
           g.add(k);
           if (k.userData && k.userData.hinge) top = Math.max(top, k.userData.layer | 0);
         }
