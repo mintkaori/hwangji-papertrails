@@ -422,7 +422,7 @@ const _R = {
   plane: new THREE.Plane(), clip: new THREE.Vector4(), q: new THREE.Vector4(), clear: new THREE.Color(), hidden: [], frames: 0, travList: [], travN: -1,
   bias: new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1),
 };
-const QRANK = { low: 0, med: 1, high: 2 };
+const QRANK = { lite: -1, low: 0, med: 1, high: 2 };
 
 /**
  * Planar mirror pass: the upright paper (tile batches, traveller, animals, leaves / birds) drawn once more with the

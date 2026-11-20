@@ -1,23 +1,38 @@
-// 황지 페이퍼트레일: keep the frame rate on modest GPUs (integrated graphics, older laptops, tablets).
+// 황지 페이퍼트레일: keep the frame rate on modest GPUs (integrated graphics, older laptops, tablets, phones).
+//   * deviceClass(): 'phone' | 'tablet' | 'desktop' from the touch screen and its size.
 //   * gpuTier(renderer): a starting quality from the GPU's name (WEBGL_debug_renderer_info) and the device: integrated
-//     Intel HD / UHD and mobile GPUs start at 'low', Iris / Radeon APUs / Apple GPUs at 'med', the rest at 'high'.
-//   * createGovernor(): watches the real frame time and walks a ladder - high -> med -> low -> low at 85 % and 70 %
-//     render resolution - one rung down after ~2.5 s of slow frames (under ~45 fps), one rung back up after ~12 s of
+//     Intel HD / UHD and tablets start at 'low', phones at 'lite' (strong phone GPUs at 'low'), Iris / Radeon APUs / Apple
+//     GPUs at 'med', the rest at 'high'.
+//   * createGovernor(): watches the real frame time and walks a ladder - high -> med -> low -> lite -> lite at 85 % and
+//     70 % render resolution - one rung down after ~2.5 s of slow frames (under ~45 fps), one rung back up after ~12 s of
 //     fast ones (over ~57 fps). A rung that proved too slow right after climbing to it becomes the ceiling, so the
-//     quality does not see-saw. The first seconds (loading, the opening fold, shader warm-up) are not judged, and
-//     neither are frames after a hidden tab or a stall (> 250 ms).
-// main.js applies a rung through renderer / post / lights / materials setQuality and the renderer's resolution scale;
-// ?quality=low|med|high pins a level and turns the governor off.
+//     quality does not see-saw. Still slow on the last rung: onFloor() once (main.js then draws every other frame, a
+//     steady 30 fps instead of a stutter). The first seconds (loading, the opening fold, shader warm-up) are not
+//     judged, and neither are frames after a hidden tab or a stall (> 250 ms).
+// main.js applies a rung through renderer / post / lights / materials setQuality and the renderer's resolution scale -
+// at the START of a frame (a size change clears the canvas; applied after drawing, phones showed one black frame);
+// ?quality=lite|low|med|high pins a level and turns the governor off.
 
 export const LADDER = [
   { level: 'high', scale: 1 },
   { level: 'med', scale: 1 },
   { level: 'low', scale: 1 },
-  { level: 'low', scale: 0.85 },
-  { level: 'low', scale: 0.7 },
+  { level: 'lite', scale: 1 },
+  { level: 'lite', scale: 0.85 },
+  { level: 'lite', scale: 0.7 },
 ];
 
-/** Starting quality for this device: 'low' | 'med' | 'high'. */
+/** 'phone' | 'tablet' | 'desktop': a touch screen whose short side is under 600 CSS px is a phone. */
+export function deviceClass() {
+  if (typeof navigator === 'undefined' || typeof screen === 'undefined') return 'desktop';
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  if (!(navigator.maxTouchPoints > 1) && !coarse) return 'desktop';
+  const short = Math.min(screen.width || 0, screen.height || 0) || Math.min(window.innerWidth, window.innerHeight);
+  if (short < 600) return 'phone';
+  return coarse || short < 900 ? 'tablet' : 'desktop';
+}
+
+/** Starting quality for this device: 'lite' | 'low' | 'med' | 'high'. */
 export function gpuTier(renderer) {
   let name = '';
   try {
@@ -25,10 +40,15 @@ export function gpuTier(renderer) {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) || '').toLowerCase();
   } catch { name = ''; }
-  const touch = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900;
+  const device = deviceClass();
+  const touch = device !== 'desktop' || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900);
   const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8;
   const mem = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 8;
-  if (/swiftshader|llvmpipe|software|basic render|microsoft basic/.test(name)) return 'low';
+  if (/swiftshader|llvmpipe|software|basic render|microsoft basic/.test(name)) return 'lite';
+  if (device === 'phone') {
+    // recent flagship phone GPUs hold 'low' (shadows, depth of field); everything else starts light and climbs if fast
+    return /apple gpu|adreno \(tm\) [78]\d\d|adreno [78]\d\d|immortalis|mali-g7[1-9]\d|mali-g6[1-9]\d/.test(name) && mem > 4 ? 'low' : 'lite';
+  }
   if (/mali|adreno|powervr|videocore|tegra/.test(name) || touch) return 'low';
   if (/nvidia|geforce|rtx|gtx|quadro|radeon (rx|pro)|radeon\(tm\) rx|intel\(r\) arc|intel arc/.test(name)) return cores <= 4 || mem <= 4 ? 'med' : 'high';
   if (/iris|radeon|vega|apple/.test(name)) return 'med';
@@ -37,13 +57,14 @@ export function gpuTier(renderer) {
 }
 
 /**
- * start: a quality level ('high' | 'med' | 'low'); apply(rung, index) is called when the governor changes rung.
+ * start: a quality level ('high' | 'med' | 'low' | 'lite'); apply(rung, index, why) is called when the governor changes
+ * rung (main.js defers the work to the next frame's start); onFloor() once when even the last rung is too slow.
  * Call tick() once per rendered frame.
  */
-export function createGovernor({ start = 'high', apply, slowFps = 45, fastFps = 57, warmup = 6 }) {
+export function createGovernor({ start = 'high', apply, onFloor = null, slowFps = 45, fastFps = 57, warmup = 6 }) {
   let i = Math.max(0, LADDER.findIndex((r) => r.level === start));
   let last = 0; let ema = 1000 / 60; let judged = -warmup; // seconds of judged time (negative: still warming up)
-  let slow = 0; let fast = 0; let ceiling = 0; let climbedAt = -1e9; let clock = 0;
+  let slow = 0; let fast = 0; let ceiling = 0; let climbedAt = -1e9; let clock = 0; let floored = false;
   const slowMs = 1000 / slowFps; const fastMs = 1000 / fastFps;
   function go(k, why) {
     if (k === i || k < 0 || k >= LADDER.length) return;
@@ -61,9 +82,13 @@ export function createGovernor({ start = 'high', apply, slowFps = 45, fastFps = 
       clock += s;
       ema += (raw - ema) * 0.08;
       judged += s;
-      if (judged < 0) return;
+      if (judged < 0 || floored) return;
       if (ema > slowMs) { slow += s; fast = 0; } else if (ema < fastMs) { fast += s; slow = 0; } else { slow = Math.max(0, slow - s); fast = Math.max(0, fast - s); }
       if (slow > 2.5) {
+        if (i === LADDER.length - 1) {
+          if (slow > 5 && onFloor) { floored = true; onFloor(`${(1000 / ema).toFixed(0)} fps`); }
+          return;
+        }
         if (clock - climbedAt < 10) ceiling = Math.max(ceiling, i + 1); // the rung it just climbed to was too much
         go(i + 1, `${(1000 / ema).toFixed(0)} fps`);
       } else if (fast > 12 && i > ceiling) go(i - 1, `${(1000 / ema).toFixed(0)} fps`);
@@ -73,5 +98,6 @@ export function createGovernor({ start = 'high', apply, slowFps = 45, fastFps = 
     get rung() { return LADDER[i]; },
     get index() { return i; },
     get fps() { return 1000 / ema; },
+    get floored() { return floored; },
   };
 }

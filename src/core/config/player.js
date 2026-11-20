@@ -83,5 +83,7 @@ export const camera = {
   // All sizes are world units on the ground at the default distance (scaled with pose.distance): r = screen right, up / down.
   // enabled: false = the old always-chasing spring. Poses with zone: false and steep poses (map, > 60 deg) also use the spring.
   zone: { enabled: true, stillR: 1.0, stillUp: 0.4, stillDown: 0.6, hardR: 2.2, hardUp: 1.1, hardDown: 1.4, leadAfter: [0.35, 1.1], leadTau: 0.7, leadRate: 1.2, smoothTime: 0.28 },
+  // 황지 페이퍼트레일: tall phone screens (aspect under `below`) back the lens off by up to maxPull (camera/follow.js framing)
+  portrait: { enabled: true, below: 1, maxPull: 1.45 },
   assist: { enabled: true, delay: 0.4, release: 0.6, pitchMax: 10, yawMax: 14, ease: 0.8, interval: 0.1, rethink: 1.2, far: 1.3 }, // far: a second, slightly wider tier (x far: 13 / 18 degrees) only when the first still leaves part of him hidden
 };

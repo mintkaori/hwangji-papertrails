@@ -14,7 +14,7 @@ import { createFollowCamera } from './camera/follow.js';
 import { createRenderer } from './render/renderer.js';
 import { createLights } from './render/lights.js';
 import { createPost } from './render/post.js';
-import { gpuTier, createGovernor } from './render/governor.js';
+import { gpuTier, createGovernor, deviceClass } from './render/governor.js';
 import { createMaterials } from './render/materials.js';
 import { createPaperAudio } from './audio/paper.js';
 import { createMusic } from './audio/music.js';
@@ -28,6 +28,7 @@ import { INTRO } from './game/intro.js';
 import { createWeather } from './game/weather.js';
 import { createFish } from './life/fish.js';
 import { createViews } from './camera/views.js';
+import { createTouchBar, isTouchUI } from './game/touchbar.js';
 // Allocation-free two-dimensional length.
 const hypot2 = (a, b) => Math.sqrt(a * a + b * b);
 
@@ -43,6 +44,16 @@ const showIntro = params.get('intro') !== '0';
 
 state.seed = seed;
 state.quality = quality;
+
+// 황지 페이퍼트레일 (user 2026-11-20): phones show fewer things per screen - every other soft filler card stays down
+// (cards.js thinning: the risen tile, the page print and the walk field agree) and fewer animals roam. Set before the
+// world, its book bake and the animals read them.
+const device = deviceClass();
+if (device === 'phone' && params.get('dense') !== '1') {
+  const mt = CONFIG.world.mobileThin || { thin: 0.5, thinHouse: 0.3 };
+  if (CONFIG.world.cards) { CONFIG.world.cards.thin = Math.max(CONFIG.world.cards.thin || 0, mt.thin); CONFIG.world.cards.thinHouse = Math.max(CONFIG.world.cards.thinHouse || 0, mt.thinHouse); }
+  if (CONFIG.animals && CONFIG.animals.density) CONFIG.animals.density *= 0.6;
+}
 
 // PWA: the service worker (public/sw.js) caches the game so it installs and plays offline (production builds only:
 // in dev it would get in the way of hot reloading)
@@ -159,7 +170,24 @@ async function boot() {
     materials.update(dt);
   }
 
+  // ---- size and quality changes happen at the START of a frame, right before it is drawn -----------------------------
+  // A new drawing-buffer size or pixel ratio clears the canvas. Done from a 'resize' event, or after the frame was drawn
+  // (the governor used to apply its rung at the end of render()), the browser could show that cleared canvas for a
+  // frame - the black flicker on phones. Now both only leave a note here, and render() applies them before drawing.
+  let needResize = true; let pendingRung = null; let sizeKey = '';
+  function applyRung(rung, why) {
+    rend.setQuality(rung.level); rend.setScale(rung.scale);
+    post.setQuality(rung.level); lights.setQuality(rung.level); materials.setQuality(rung.level);
+    state.quality = rung.level;
+    console.info(`[quality] ${rung.level}${rung.scale < 1 ? ` x${rung.scale}` : ''} (${why})`);
+  }
+  function frameStart() {
+    if (pendingRung) { const p = pendingRung; pendingRung = null; applyRung(p.rung, p.why); sizeKey = ''; needResize = true; }
+    if (needResize) { needResize = false; resize(); }
+  }
+
   function render(dt) {
+    frameStart();
     post.setFocus(follow.focusPoint);
     post.render(dt);
     game.atlasmap.render(); // Drawn over the finished frame; no-op while closed.
@@ -169,13 +197,9 @@ async function boot() {
   // ---- frame-rate governor (render/governor.js): steps quality / resolution to keep the fps on modest GPUs ----------
   const governor = pinned ? null : createGovernor({
     start: quality,
-    apply(rung, i, why) {
-      rend.setQuality(rung.level); rend.setScale(rung.scale);
-      post.setQuality(rung.level); lights.setQuality(rung.level); materials.setQuality(rung.level);
-      state.quality = rung.level;
-      resize();
-      console.info(`[quality] ${rung.level}${rung.scale < 1 ? ` x${rung.scale}` : ''} (${why})`);
-    },
+    apply(rung, i, why) { pendingRung = { rung, why }; }, // applied by frameStart() before the next frame is drawn
+    // even the lightest rung is slow: a steady 30 fps (every other vsync) instead of a stutter
+    onFloor(why) { loop.setCap(30); console.info(`[quality] capped at 30 fps (${why})`); },
   });
 
   const loop = createLoop({ update, render });
@@ -184,18 +208,57 @@ async function boot() {
   function resize() {
     const w = Math.max(1, window.innerWidth);
     const h = Math.max(1, window.innerHeight);
+    const key = w + 'x' + h + '@' + (window.devicePixelRatio || 1);
+    if (key === sizeKey) return; // phones fire 'resize' for things that change nothing here: no new buffers for them
+    sizeKey = key;
     setRendererSize(w, h);
     follow.setAspect(w / h);
     post.setSize(w, h);
     bus.emit('resize', { width: w, height: h, dpr: renderer.getPixelRatio() });
   }
-  window.addEventListener('resize', resize);
+  const askResize = () => { needResize = true; };
+  window.addEventListener('resize', askResize);
+  window.addEventListener('orientationchange', askResize);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', askResize);
+
+  // ---- a lost WebGL context (phones under memory pressure, a long time in the background): say so, then start over ----
+  // The page print is baked once into GPU memory, so a restored context cannot simply carry on: reload (progress is
+  // saved in localStorage). If the browser never restores it, reload when the page is visible again.
+  let lostAt = 0;
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    lostAt = performance.now();
+    loop.stop();
+    const note = document.createElement('div');
+    note.id = 'hj-lost';
+    note.textContent = '그림을 다시 펼치는 중이에요…';
+    note.style.cssText = 'position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#1c130d;color:#fff3dc;font:400 18px/1.5 Jua, "Malgun Gothic", sans-serif;letter-spacing:0.04em;';
+    document.body.appendChild(note);
+    setTimeout(() => { if (!document.hidden) location.reload(); }, 4000);
+  }, false);
+  canvas.addEventListener('webglcontextrestored', () => location.reload(), false);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && lostAt) location.reload(); });
 
   // ---- hint (the only on-screen text) -----------------------------------------------------------
   if (showHint) {
     hint.classList.add('on');
     bus.once('input:first', () => hint.classList.remove('on'));
   } else hint.remove();
+
+  // ---- touch screens: the keys' actions as round paper buttons (map, night, music, view), top right ----------------
+  if (isTouchUI()) {
+    document.documentElement.classList.add('touch');
+    const bar = createTouchBar({
+      items: [
+        { id: 'map', icon: '🗺️', label: '지도', tap: () => game.atlasmap.toggle() },
+        { id: 'night', icon: '🌙', label: '밤', tap: () => { const n = daynight.toggle(); bar.set('night', n ? '☀️' : '🌙', n ? '낮' : '밤'); } },
+        { id: 'music', icon: '🎵', label: '음악', tap: () => { const on = music.toggle(); bar.set('music', on ? '🎵' : '🔇', on ? '음악' : '조용히'); } },
+        { id: 'view', icon: '🎥', label: '시점', tap: () => { if (!game.modal()) views.next(); } },
+      ],
+    });
+    bar.set('night', daynight.night ? '☀️' : '🌙', daynight.night ? '낮' : '밤');
+    bar.set('music', music.on ? '🎵' : '🔇', music.on ? '음악' : '조용히');
+  }
 
   // Find a safe initial position without skipping the opening fold animation.
   function initialPosition() {
@@ -215,7 +278,7 @@ async function boot() {
   // ---- start ------------------------------------------------------------------------------------------
   loading.step(0.86, '친구들을 부르는 중…');
   if (animals) await animals.ready;
-  resize();
+  needResize = false; resize();
   const [x, z] = initialPosition();
   traveller.teleport(x, z);
   controls.clearTarget();

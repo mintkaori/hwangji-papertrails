@@ -15,6 +15,12 @@ export const world = {
   // (no print with nothing rising). thin: 0 (and thinHouse: 0) switches thinning off - use that once the tile builders carry
   // fewer filler cards. collide: the walk field, scraps and smoke use the pieces as DRAWN (false = authored sizes).
   cards: { enabled: true, jitterDeg: 14, bush: 1.22, small: 1.3, prop: 1.15, tree: 0.86, reeds: 0.8, house: 1.3, houseRow: 1.34, crossDeg: 24, thin: 0, thinHouse: 0, collide: true },
+  // 황지 페이퍼트레일 (user 2026-11-20: "길 중간에 막는 에셋은 없도록"): a decorative card that would stand on the inner `lane`
+  // (half width, world units; the printed road is 0.25) of a road never rises (world.js clearRoads -> cards.js). `keep`
+  // (regexp source, optional) names the pieces a road is for: lamps, buildings, signs, bridges, wells, stalls ...
+  roadClear: { enabled: true, lane: 0.2 },
+  /** Phones (main.js, touch + small screen): share of the soft filler cards that stays down - fewer cards per screen. */
+  mobileThin: { thin: 0.5, thinHouse: 0.3 },
   // shortfall pass (the dotted see-through circle is off): a tree / bush / single prop standing in the sight line between
   // the camera and the traveller tips leanDeg to the side (still facing the camera) and stands up again when he
   // has passed. cover = how much of the card must show above his knees before it moves, side = extra half width of the
@@ -183,7 +189,7 @@ export const book = {
   /** Build page / block / cover from materials.paper() (same lighting as the tiles); false = private materials. */
   usePaperMaterial: true,
   /** Baked print atlas: pixels per tile for quality low / med / high. */
-  bakeSize: { low: 256, med: 384, high: 512 }, // 43 models x 2 layers: 512 = ~115 MB with mips, 384 = ~65 MB
+  bakeSize: { lite: 256, low: 256, med: 384, high: 512 }, // 43 models x 2 layers: 512 = ~115 MB with mips, 384 = ~65 MB
   /** How un-risen terrain looks: 0 = blank page, 1 = full ink. */
   fadedInk: 0.8,
   /** round 3 (page): full colour within fadeNear world units of the traveller, pencil-sketch look beyond fadeFar (soft, noise-warped). */

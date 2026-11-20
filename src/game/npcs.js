@@ -19,6 +19,9 @@ import { createPaperUI } from './paperui.js';
 import { createIntro } from './intro.js';
 import { MASCOTS, PLACE_TALK, SEASON_TALK, WEATHER_TALK, voiceKey } from './talk.js';
 
+/** Touch screens (no keyboard): the talk hint says 'tap the bubble' instead of Space. */
+const TOUCH = typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches;
+
 // ---- the mascots: their lines and voices live in game/talk.js (shared with the recording tool) ---------------------
 export { MASCOTS };
 
@@ -315,7 +318,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     if (!m) return;
     const lines = linesFor(talking, talkModel);
     const text = lines[line % lines.length];
-    bubble.show([{ text: m.name, cls: 't' }, { text }, { text: 'Space 더 이야기하기', cls: 's' }]);
+    bubble.show([{ text: m.name, cls: 't' }, { text }, { text: TOUCH ? '말풍선을 누르면 더 이야기' : 'Space 더 이야기하기', cls: 's' }]);
     sound('talk', 0.6);
     if (sfx) sfx.speak(voiceKey(talking, text)); // its own recorded voice (game/talk.js VOICES)
   }
@@ -329,6 +332,13 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
   }
   window.addEventListener('keydown', onKey);
   ui.button.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); toggleBook(); });
+  // touch screens have no Space key: a tap on the speech bubble hears the next line (paperui.js makes it tappable there)
+  bubble.el.addEventListener('pointerdown', (e) => {
+    if (!talking || ui.isOpen) return;
+    e.stopPropagation(); e.preventDefault();
+    line++;
+    say();
+  });
 
   function mascots(dt) {
     if (!animals || !animals.npcNear) return;

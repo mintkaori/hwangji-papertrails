@@ -18,7 +18,7 @@ import { createFoldInstance } from './fold.js';
 import { createBook, BIOME_TINT_GLSL, biomeTintUniforms, biomeFoliageUniforms, biomeIndexOf, TINT_IDENTITY } from './book.js';
 import { biomeAt as biomeIdAt, biomeWeights, BIOMES } from '../core/biomes.js';
 import { state } from '../core/state.js';
-import { isThinned, hashStr } from './cards.js';
+import { isThinned, hashStr, setRoadCleared } from './cards.js';
 import { createTerrain, TERRAIN_BATCH_VERTEX } from './terrain.js';
 import { createWet } from '../render/wet.js';
 // integration: V8's Math.hypot allocates (rest-argument array) on every call; this 2-argument form is allocation-free.
@@ -1495,6 +1495,86 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
       book.dispose();
     },
   };
+  clearRoads();
   sight.world = api;
   return api;
+
+  // ---- 황지 페이퍼트레일: nothing decorative stands in the middle of a road -----------------------------------------
+  // For every tile model with a path socket: a top-level card whose ground footprint (its geometry below blockBandHi, in
+  // the model's rot-0 frame) reaches into the inner lane (onKind 'path' with half width roadClear.lane) stays down for
+  // good - cards.js isThinned, so the risen tile, the book's print and the walk field all agree. A card that turns to
+  // face the camera (CARD_RX) or stands as a cross (CROSS_RX) is tested over the whole circle it can sweep about its
+  // hinge. Lamps, buildings, signs, bridges, wells and stalls - the things a road leads to - are kept.
+  function clearRoads() {
+    const RC = W.roadClear || {};
+    if (RC.enabled === false) { setRoadCleared(new Set()); return; }
+    const lane = RC.lane ?? 0.2;
+    const keep = new RegExp(RC.keep || '^(base|lamp|lantern|post|stone_lantern|house|cottage|cabin|manor|church|nave|steeple|chapel|gazebo|barn|tower|watchtower|mill|windmill|bldg|wall|roof|gate|arch|bridge|deck|ramp|rail|sign|guidepost|well|door|stall|market|tent|camp|fountain|statue|stele|monument)');
+    // a dead-end lane (one path socket) leads to a door / sign at the tile centre: only its outer part is a road
+    const deadEnd = RC.deadEnd ?? 0.45;
+    const onLane = (s, x, z) => {
+      if (!onKind(s, 'path', x, z, lane)) return false;
+      const k = (s.n === 'path' ? 1 : 0) + (s.e === 'path' ? 1 : 0) + (s.s === 'path' ? 1 : 0) + (s.w === 'path' ? 1 : 0);
+      if (k !== 1) return true;
+      return s.n === 'path' ? z <= -deadEnd : s.s === 'path' ? z >= deadEnd : s.e === 'path' ? x >= deadEnd : x <= -deadEnd;
+    };
+    const grow = Math.max(1, ...Object.values(W.cards || {}).filter((x) => typeof x === 'number' && x < 3));
+    const out = new Set();
+    const ids = assets.modelIds && assets.modelIds.length ? assets.modelIds : Object.keys(MODELS);
+    const p = new THREE.Vector3(); const q = new THREE.Vector3(); const r = new THREE.Vector3(); const h = new THREE.Vector3();
+    for (const id of ids) {
+      const s = MODELS[id] && MODELS[id].sockets;
+      if (!s || !(s.n === 'path' || s.e === 'path' || s.s === 'path' || s.w === 'path')) continue;
+      let proto = null;
+      try { proto = assets.getTilePrototype(id); } catch { proto = null; }
+      if (!proto) continue;
+      proto.updateMatrixWorld(true);
+      for (const top of proto.children) {
+        const name = String(top.name || '').replace(/^.*__/, '');
+        if (!name || keep.test(name)) continue;
+        const sweep = CARD_RX.test(name) || (CROSS_RX.test(name) && top.children.some((c) => /_x[bf]$/.test(c.name || '')));
+        top.getWorldPosition(h);
+        let hit = false; let reach = 0;
+        top.traverse((o) => {
+          if (hit || !o.isMesh || !o.geometry) return;
+          const pos = o.geometry.getAttribute('position');
+          if (!pos) return;
+          const idx = o.geometry.getIndex();
+          const tris = ((idx ? idx.count : pos.count) / 3) | 0;
+          for (let t = 0; t < tris && !hit; t++) {
+            p.fromBufferAttribute(pos, idx ? idx.getX(t * 3) : t * 3).applyMatrix4(o.matrixWorld);
+            q.fromBufferAttribute(pos, idx ? idx.getX(t * 3 + 1) : t * 3 + 1).applyMatrix4(o.matrixWorld);
+            r.fromBufferAttribute(pos, idx ? idx.getX(t * 3 + 2) : t * 3 + 2).applyMatrix4(o.matrixWorld);
+            if (Math.min(p.y, q.y, r.y) > W.blockBandHi) continue; // in the air (a hanging lantern, a sign board)
+            const n = Math.min(24, Math.max(1, Math.ceil(Math.max(p.distanceTo(q), q.distanceTo(r), r.distanceTo(p)) / 0.04)));
+            for (let i = 0; i <= n && !hit; i++) {
+              for (let j = 0; j <= n - i; j++) {
+                const a = i / n; const b = j / n;
+                const y = p.y + (q.y - p.y) * a + (r.y - p.y) * b;
+                if (y > W.blockBandHi) continue;
+                const x = p.x + (q.x - p.x) * a + (r.x - p.x) * b;
+                const z = p.z + (q.z - p.z) * a + (r.z - p.z) * b;
+                if (sweep) reach = Math.max(reach, hypot2(x - h.x, z - h.z));
+                else if (onLane(s, x, z)) { hit = true; break; }
+              }
+            }
+          }
+        });
+        if (!hit && sweep && reach > 0) {
+          // the circle the card can turn through (scaled up by the card-size factors), sampled on three rings
+          const rr = reach * grow;
+          for (let k = 0; k <= 3 && !hit; k++) {
+            const rad = (rr * k) / 3;
+            for (let a = 0; a < 16 && !hit; a++) {
+              const ang = (a / 16) * Math.PI * 2;
+              if (onLane(s, h.x + Math.cos(ang) * rad, h.z + Math.sin(ang) * rad)) hit = true;
+            }
+          }
+        }
+        if (hit) out.add(id + '/' + name);
+      }
+    }
+    setRoadCleared(out);
+    if (out.size) console.info(`[roads] ${out.size} cards kept off the roads:`, [...out].join(' '));
+  }
 }

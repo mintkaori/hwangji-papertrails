@@ -31,6 +31,17 @@ export function createFollowCamera({ aspect = 16 / 9 } = {}) {
   const _right = new THREE.Vector3();
   const _up = new THREE.Vector3();
   let clock = 0; // drift clock (sum of dt since the last snap)
+  // 황지 페이퍼트레일: a tall phone screen sees only a strip of the page (the vertical field of view is fixed), barely one
+  // tile across. Below CONFIG.camera.portrait.below (aspect) the lens backs off by up to maxPull, and the camera window's
+  // side edges shrink to the narrower view (hScale = the share of the 16:9 width that is still visible).
+  let aspectK = 1; let hScale = 1;
+  function framing(a) {
+    const P = C.portrait || {};
+    if (P.enabled === false || !(a < (P.below ?? 1))) { aspectK = 1; hScale = 1; return; }
+    aspectK = Math.min(P.maxPull ?? 1.45, Math.max(1, Math.sqrt((P.below ?? 1) / a)));
+    hScale = Math.min(1, (a * aspectK) / (16 / 9));
+  }
+  framing(aspect);
 
   // ---- sight assist ---------------------------------------------------------------------------
   // When a LARGE piece (house, tower, stall: what world.js make-room cannot tip aside) hides the traveller for longer than
@@ -51,8 +62,8 @@ export function createFollowCamera({ aspect = 16 / 9 } = {}) {
     if (!w || !w.sightBlocked) return 0;
     const yaw = (pose.yawDeg + yawOff) * DEG;
     const pitch = Math.min(80, pose.pitchDeg + pitchOff) * DEG;
-    const h = Math.cos(pitch) * pose.distance;
-    _cam.set(target.x + Math.sin(yaw) * h, target.y + Math.sin(pitch) * pose.distance, target.z + Math.cos(yaw) * h);
+    const h = Math.cos(pitch) * pose.distance * aspectK;
+    _cam.set(target.x + Math.sin(yaw) * h, target.y + Math.sin(pitch) * pose.distance * aspectK, target.z + Math.cos(yaw) * h);
     let n = 0;
     for (let i = 0; i < AS_HEIGHTS.length; i++) {
       const ox = traveller.position.x; const oy = traveller.position.y + CONFIG.TRAVELLER_HEIGHT * AS_HEIGHTS[i]; const oz = traveller.position.z;
@@ -169,7 +180,7 @@ export function createFollowCamera({ aspect = 16 / 9 } = {}) {
     const dR = (p.x - zPrev.x) * rx + (p.z - zPrev.z) * rz;
     const dU = (p.x - zPrev.x) * ux + (p.z - zPrev.z) * uz;
     zPrev.copy(p);
-    const sR = ZN.stillR * k; const hR = ZN.hardR * k;
+    const sR = ZN.stillR * k * hScale; const hR = ZN.hardR * k * hScale;
     const sU = (oU >= 0 ? ZN.stillUp : ZN.stillDown) * k; const hU = (oU >= 0 ? ZN.hardUp : ZN.hardDown) * k;
     // steady walk one way -> w (0..1): the window travels with him and slides ahead of him
     const vx = traveller.velocity.x; const vz = traveller.velocity.z; const v = Math.hypot(vx, vz);
@@ -222,8 +233,9 @@ export function createFollowCamera({ aspect = 16 / 9 } = {}) {
   function place() {
     const pitch = (pose.pitchDeg + aPitch) * DEG;
     const yaw = (pose.yawDeg + aYaw) * DEG;
-    const h = Math.cos(pitch) * pose.distance;
-    camera.position.set(target.x + Math.sin(yaw) * h, target.y + Math.sin(pitch) * pose.distance, target.z + Math.cos(yaw) * h);
+    const dist = pose.distance * aspectK;
+    const h = Math.cos(pitch) * dist;
+    camera.position.set(target.x + Math.sin(yaw) * h, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * h);
     camera.up.set(0, 1, 0);
     if (pose.pitchDeg + aPitch >= 88.5) camera.up.set(-Math.sin(yaw), 0, -Math.cos(yaw)); // straight down: keep north up
     const amp = pose.driftAmp || 0;
@@ -316,6 +328,7 @@ export function createFollowCamera({ aspect = 16 / 9 } = {}) {
     },
     setAspect(a) {
       camera.aspect = a;
+      framing(a);
       camera.updateProjectionMatrix();
     },
   };

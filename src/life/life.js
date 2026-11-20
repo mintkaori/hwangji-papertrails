@@ -160,7 +160,7 @@ export function createLife({ scene, assets, wfc, daynight, camera, quality = 'hi
   // Weather lands on the world surface, including bridge decks.
   const L = CONFIG.life;
   const C = L.counts;
-  const qScale = quality === 'low' ? 0.5 : quality === 'med' ? 0.8 : 1;
+  const qScale = quality === 'lite' ? 0.3 : quality === 'low' ? 0.5 : quality === 'med' ? 0.8 : 1; // 황지: phones start at 'lite'
 
   // ---- slot layout -------------------------------------------------------------------------------------
   let n = 0;

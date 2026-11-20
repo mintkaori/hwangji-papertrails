@@ -4,7 +4,7 @@
 // - Everything else from this site (textures, models, sounds, icons) and the Jua web font: stale-while-revalidate -
 //   answered from the cache at once, refreshed in the background for next time.
 // Bump VERSION to drop every old cache.
-const VERSION = 'v4'; // v4: mascot voices, the heroine's opening story, the loading screen
+const VERSION = 'v5'; // v5: phones - no black flicker, lite quality, fewer cards per screen, roads kept clear, touch buttons, mobile 도감
 const CACHE = 'hwangji-' + VERSION;
 const CORE = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 

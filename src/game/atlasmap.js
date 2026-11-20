@@ -692,15 +692,34 @@ export function createAtlasMap(ctx) {
     if (e.code === 'Equal' || e.code === 'NumpadAdd') { view.tspan *= 0.8; zoomIdle = 0; clampView(); } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') { view.tspan *= 1.25; zoomIdle = 0; clampView(); }
   }
   function onKeyUp(e) { held.delete(e.code); }
+  // 황지 (touch): two fingers pinch the map in / out; buttons over the page (touch bar, 도감) keep their own taps
+  const fingers = new Map(); let pinch = 0; // pinch: finger distance (px) while two are down, -1 until all are lifted
+  const onPage = (e) => !e.target || e.target.nodeName === 'CANVAS' || e.target === document.body || e.target === document.documentElement;
   function onPointerDown(e) {
-    if (!want) return;
+    if (!want || !onPage(e)) return;
     e.stopPropagation();
+    if (e.pointerType === 'touch') fingers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (fingers.size >= 2) {
+      const [a, b] = [...fingers.values()];
+      pinch = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+      drag = null;
+      return;
+    }
+    if (pinch !== 0) return;
     drag = { x: e.clientX, y: e.clientY, moved: 0 };
   }
   function onPointerMove(e) {
     if (!want) return;
-    e.stopPropagation();
+    if (fingers.has(e.pointerId)) fingers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch > 0 && fingers.size >= 2) {
+      e.stopPropagation();
+      const [a, b] = [...fingers.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+      view.tspan *= pinch / d; pinch = d; zoomIdle = 0; clampView();
+      return;
+    }
     if (!drag) return;
+    e.stopPropagation();
     const dx = e.clientX - drag.x; const dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     const fh = ((frame.y1 - frame.y0) / Math.max(1, gfx.pageCanvas.height)) * Math.max(1, window.innerHeight);
@@ -709,7 +728,15 @@ export function createAtlasMap(ctx) {
     view.x = view.tx; view.z = view.tz; // the paper follows the hand exactly
   }
   function onPointerUp(e) {
+    fingers.delete(e.pointerId);
+    if (pinch !== 0) { // a pinch never closes the map; wait until every finger is lifted
+      pinch = fingers.size >= 2 ? pinch : fingers.size ? -1 : 0;
+      drag = null;
+      if (want) e.stopPropagation();
+      return;
+    }
     if (!want && !drag) return;
+    if (want && !onPage(e) && !drag) return;
     if (want) e.stopPropagation();
     const d = drag; drag = null;
     if (want && d && d.moved < 6) setOpen(false); // a plain click puts the map away
@@ -719,7 +746,7 @@ export function createAtlasMap(ctx) {
     e.preventDefault();
     view.tspan *= Math.exp(clamp(e.deltaY, -240, 240) * 0.0016); zoomIdle = 0; clampView();
   }
-  function onBlur() { held.clear(); drag = null; }
+  function onBlur() { held.clear(); drag = null; fingers.clear(); pinch = 0; }
   if (!headless) {
     window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('keyup', onKeyUp, true);

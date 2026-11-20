@@ -41,7 +41,7 @@ const CSS = `
 .hj-ui .t { color: #ffe39a; }
 .hj-ui .s { color: #f2dfc0; font-size: 0.72em; letter-spacing: 0.05em; }
 /* the opening story: top centre, the biggest words on the screen */
-.hj-intro { left: 0; right: 0; margin: 0 auto; top: max(64px, 9vh); width: max-content; max-width: min(860px, 92vw);
+.hj-intro { left: 0; right: 0; margin: 0 auto; top: calc(max(64px, 9vh) + env(safe-area-inset-top, 0px)); width: max-content; max-width: min(860px, 92vw);
   padding: 16px 30px 14px; text-align: center; font-size: clamp(20px, 2.7vw, 28px); line-height: 1.5; }
 .hj-intro::before { border-radius: 20px; }
 .hj-intro .s { margin-top: 8px; font-size: 0.62em; }
@@ -62,10 +62,10 @@ const CSS = `
 .hj-season { left: 0; right: 0; margin: 0 auto; top: 24vh; width: max-content; max-width: 92vw; text-align: center; text-shadow: ${DARK_HALO}; }
 .hj-season .t { color: #ffffff; font-size: clamp(40px, 6.4vw, 70px); letter-spacing: 0.08em; }
 .hj-season .s { color: #fff6e4; font-size: clamp(18px, 2.3vw, 25px); letter-spacing: 0.14em; }
-.hj-badge { left: 14px; top: 12px; padding: 7px 15px 6px; font-size: 17px; letter-spacing: 0.03em; white-space: nowrap; }
+.hj-badge { left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 7px 15px 6px; font-size: 17px; letter-spacing: 0.03em; white-space: nowrap; }
 .hj-badge::before, .hj-sky::before { border-radius: 999px; }
-.hj-sky { left: 14px; top: 54px; padding: 7px 15px 6px; font-size: 16px; max-width: min(580px, 84vw); }
-.hj-story { left: 0; right: 0; margin: 0 auto; bottom: 88px; width: max-content; max-width: min(720px, 92vw);
+.hj-sky { left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(54px + env(safe-area-inset-top, 0px)); padding: 7px 15px 6px; font-size: 16px; max-width: min(580px, 84vw); }
+.hj-story { left: 0; right: 0; margin: 0 auto; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: min(720px, 92vw);
   padding: 14px 26px 12px; text-align: center; font-size: clamp(18px, 2.2vw, 21px); line-height: 1.6; }
 .hj-story .t { font-size: 0.88em; letter-spacing: 0.06em; }
 .hj-story .s { letter-spacing: 0.3em; margin-top: 4px; }
@@ -81,7 +81,7 @@ const CSS = `
 .hj-bubble .t { font-size: 0.82em; letter-spacing: 0.05em; }
 .hj-bubble .s { font-size: 0.68em; margin-top: 3px; }
 /* the 도감 button, bottom centre */
-.hj-dexbtn { left: 0; right: 0; bottom: 16px; margin: 0 auto; width: max-content; display: flex; align-items: center; gap: 10px;
+.hj-dexbtn { left: 0; right: 0; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; width: max-content; display: flex; align-items: center; gap: 10px;
   padding: 9px 20px 8px; border-radius: 999px; font-size: 19px; pointer-events: auto; cursor: pointer; visibility: visible;
   background: ${PANEL}; ${BLUR} box-shadow: ${DROP}, inset 0 0 0 1.5px rgba(255, 227, 154, 0.45);
   transition: transform 0.25s ease, box-shadow 0.3s ease, background 0.25s ease; }
@@ -115,6 +115,8 @@ const CSS = `
 .hj-dex .head .prog { font-size: 18px; color: #f2dfc0; }
 .hj-dex .head .x { margin-left: auto; font-size: 17px; color: #2b1c0e; background: #ffe39a; border-radius: 999px; padding: 7px 16px 6px; cursor: pointer; }
 .hj-dex .head .x:hover { background: #fff0c2; }
+.hj-dex .head .x kbd { font: inherit; font-size: 0.72em; margin-left: 7px; padding: 0 6px; border-radius: 5px; background: rgba(43, 28, 14, 0.14); }
+.hj-dex .back { display: none; }
 .hj-dex .tabs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 10px; }
 .hj-dex .tabs button { font: inherit; font-size: 19px; color: #f0e3cb; background: rgba(255, 245, 225, 0.07); cursor: pointer;
   border: 1.5px solid rgba(255, 240, 210, 0.18); border-radius: 999px; padding: 6px 16px 5px; }
@@ -139,11 +141,58 @@ const CSS = `
 .hj-dex .detail .where { margin-top: 4px; font-size: 17px; color: #ffe39a; letter-spacing: 0.03em; background: rgba(255, 227, 154, 0.1);
   padding: 6px 14px 5px; border-radius: 999px; }
 @media (max-width: 720px) {
-  .hj-dex .book { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(0, 0.9fr) minmax(0, 1.1fr); height: 92vh; padding: 16px; }
-  .hj-dex .head h2 { font-size: 26px; }
-  .hj-dex .detail p { font-size: 17px; }
+  .hj-dex { align-items: stretch; }
+  .hj-dex .book { width: auto; height: auto; margin: calc(8px + env(safe-area-inset-top, 0px)) calc(8px + env(safe-area-inset-right, 0px))
+      calc(8px + env(safe-area-inset-bottom, 0px)) calc(8px + env(safe-area-inset-left, 0px)); flex: 1;
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; padding: 14px 14px 12px; border-radius: 18px; }
+  .hj-dex .head { gap: 10px; flex-wrap: nowrap; }
+  .hj-dex .head h2 { font-size: 22px; white-space: nowrap; letter-spacing: 0.03em; }
+  .hj-dex .head .prog { font-size: 14px; white-space: nowrap; }
+  .hj-dex .head .x { font-size: 15px; padding: 7px 13px 6px; white-space: nowrap; }
+  .hj-dex .tabs { flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 0 -14px; padding: 0 14px 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hj-dex .tabs::-webkit-scrollbar { display: none; }
+  .hj-dex .tabs button { flex: none; font-size: 15px; padding: 6px 12px 5px; white-space: nowrap; }
+  .hj-dex .list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-right: 0; }
+  .hj-dex .item { font-size: 15px; padding: 6px; gap: 8px; border-radius: 10px; }
+  .hj-dex .detail { display: none; padding: 10px 12px; }
+  .hj-dex .book.reading { grid-template-rows: auto minmax(0, 1fr); }
+  .hj-dex .book.reading .tabs, .hj-dex .book.reading .list { display: none; }
+  .hj-dex .book.reading .detail { display: flex; }
+  .hj-dex .back { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin: 0 0 6px; font: inherit; font-size: 16px;
+    color: #2b1c0e; background: #ffe39a; border: 0; border-radius: 999px; padding: 6px 14px 5px 10px; cursor: pointer; }
+  .hj-dex .detail h3 { font-size: 24px; }
+  .hj-dex .detail .short { font-size: 17px; margin: 6px 0 10px; }
+  .hj-dex .detail p { font-size: 16px; line-height: 1.7; }
+  .hj-dex .detail .where { font-size: 15px; }
   .hj-badge { font-size: 15px; }
+  .hj-sky { font-size: 14px; }
   .hj-dexbtn { font-size: 17px; padding: 8px 16px 7px; }
+}
+/* phones on their side: the two-page book, smaller */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hj-dex .book { width: min(1040px, 96vw); height: calc(100vh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding: 12px 16px 10px; gap: 8px 16px; border-radius: 16px; }
+  .hj-dex .head h2 { font-size: 21px; }
+  .hj-dex .head .prog { font-size: 14px; }
+  .hj-dex .head .x { font-size: 14px; padding: 5px 12px 4px; }
+  .hj-dex .tabs { flex-wrap: nowrap; overflow-x: auto; gap: 6px; scrollbar-width: none; }
+  .hj-dex .tabs button { flex: none; font-size: 14px; padding: 4px 11px 3px; white-space: nowrap; }
+  .hj-dex .list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+  .hj-dex .item { font-size: 14px; padding: 5px; }
+  .hj-dex .detail { padding: 8px 12px; }
+  .hj-dex .detail h3 { font-size: 21px; }
+  .hj-dex .detail .short { font-size: 15px; margin: 4px 0 8px; }
+  .hj-dex .detail p { font-size: 15px; line-height: 1.6; }
+  .hj-intro { font-size: 18px; padding: 10px 20px 9px; }
+}
+/* touch screens: no keyboard hints; no blur (costly over WebGL on phones, and some Android GPUs flicker with it); the
+   speech bubble can be tapped for the next line */
+@media (hover: none) and (pointer: coarse) {
+  .hj-ui.panel::before, .hj-dexbtn { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(34, 22, 12, 0.82); }
+  .hj-dex { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(14, 9, 4, 0.62); }
+  .hj-ui .w, .hj-ui.in .w, .hj-ui.gust .w, .hj-ui.write.gust .w { filter: none; }
+  .hj-dexbtn kbd, .hj-dex .head .x kbd { display: none; }
+  .hj-bubble.on { pointer-events: auto; cursor: pointer; }
 }
 `;
 
@@ -302,18 +351,27 @@ export function createPaperUI({ sound = () => {} } = {}) {
 
   // ---- the book ------------------------------------------------------------------------------------------------------
   const dex = div('hj-dex');
-  dex.innerHTML = `<div class="book"><div class="head"><h2>📖 태백 도감</h2><span class="prog"></span><span class="x">닫기 ✕ (B)</span></div>
+  dex.innerHTML = `<div class="book"><div class="head"><h2>📖 태백 도감</h2><span class="prog"></span><span class="x">닫기 ✕<kbd>B</kbd></span></div>
     <div class="tabs"></div><div class="list"></div><div class="detail"></div></div>`;
   document.body.appendChild(dex);
   made.push(dex);
   let book = null; // { tabs: [{ id, name, entries: [{ id, name, icon, short, detail, where, pic, known }] }], total, found }
   let tab = 0; let sel = null; let isOpen = false;
+  let reading = false; // phones: the detail is its own page (list -> tap -> detail -> back)
+  const narrow = () => window.innerWidth <= 720;
   function renderDetail() {
     const d = dex.querySelector('.detail');
     d.innerHTML = '';
     const e = sel;
     if (!e) { d.innerHTML = '<p class="where">아직 찾은 것이 없어요. 가까이 다가가 보세요!</p>'; return; }
-    const box = { w: Math.round(Math.min(320, d.clientWidth * 0.7 || 320)), h: window.innerWidth <= 720 ? 120 : 210 };
+    if (narrow()) {
+      const back = document.createElement('button');
+      back.className = 'back';
+      back.innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M8.5 1.5 3.5 6.5l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 목록';
+      back.onclick = () => { reading = false; sound('page'); render(); };
+      d.appendChild(back);
+    }
+    const box = { w: Math.round(Math.min(320, d.clientWidth * 0.7 || 320)), h: narrow() ? 150 : window.innerHeight <= 520 ? 110 : 210 };
     d.appendChild(framed(e.pic, box.w, box.h).frame);
     const h = document.createElement('h3'); h.textContent = `${e.icon || ''} ${e.name}`;
     const sh = div('short'); sh.textContent = e.short || '';
@@ -331,7 +389,7 @@ export function createPaperUI({ sound = () => {} } = {}) {
       const n = t.entries.filter((e) => e.known).length;
       b.textContent = `${t.name} ${n}/${t.entries.length}`;
       if (i === tab) b.className = 'on';
-      b.onclick = () => { if (tab !== i) sound('page'); tab = i; sel = book.tabs[tab].entries.find((e) => e.known) || null; render(); };
+      b.onclick = () => { if (tab !== i) sound('page'); tab = i; reading = false; sel = book.tabs[tab].entries.find((e) => e.known) || null; render(); };
       tabs.appendChild(b);
     });
     const list = dex.querySelector('.list');
@@ -341,16 +399,19 @@ export function createPaperUI({ sound = () => {} } = {}) {
       const it = div('item' + (e.known ? '' : ' unknown') + (sel && sel.id === e.id ? ' sel' : ''));
       const name = document.createElement('span');
       name.textContent = e.known ? e.name : '???';
-      it.append(framed(e.pic, 48, 48).frame, name);
-      if (e.known) it.onclick = () => { if (sel !== e) sound('page'); sel = e; render(); };
+      const ps = narrow() ? 40 : window.innerHeight <= 520 ? 36 : 48;
+      it.append(framed(e.pic, ps, ps).frame, name);
+      if (e.known) it.onclick = () => { if (sel !== e || narrow()) sound('page'); sel = e; if (narrow()) reading = true; render(); };
       list.appendChild(it);
     }
+    dex.querySelector('.book').classList.toggle('reading', narrow() && reading);
     renderDetail();
+    if (narrow() && reading) dex.querySelector('.detail').scrollTop = 0;
   }
   function open(b) {
     book = b;
     if (!sel || !book.tabs[tab].entries.some((e) => e.id === sel.id && e.known)) sel = book.tabs[tab].entries.find((e) => e.known) || null;
-    if (!isOpen) sound('open');
+    if (!isOpen) { sound('open'); reading = false; }
     isOpen = true;
     dex.classList.add('open');
     render();
@@ -376,7 +437,7 @@ export function createPaperUI({ sound = () => {} } = {}) {
     close,
     get isOpen() { return isOpen; },
     /** Focus an entry (id) in the open book. */
-    select(id) { if (!book) return; for (let i = 0; i < book.tabs.length; i++) { const e = book.tabs[i].entries.find((q) => q.id === id); if (e) { tab = i; sel = e.known ? e : sel; render(); return; } } },
+    select(id) { if (!book) return; for (let i = 0; i < book.tabs.length; i++) { const e = book.tabs[i].entries.find((q) => q.id === id); if (e) { tab = i; sel = e.known ? e : sel; reading = !!(e.known && narrow()); render(); return; } } },
     dispose() { for (const el of made) el.remove(); style.remove(); },
   };
 }
