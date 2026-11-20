@@ -6,10 +6,17 @@
 const GAIN = { discover: 0.55, collect: 0.6, write: 0.5, open: 0.55, close: 0.4, page: 0.42, talk: 0.32, season: 0.42 };
 const FILE = { open: 'book_open', close: 'book_close' };
 
-/** extra: more file names (without .mp3) to load, e.g. voice lines. */
-export function createSfx({ audio, base = './sounds/', extra = [] }) {
+/**
+ * extra: more file names (without .mp3) to load, e.g. voice lines. voices: folder of the mascots' recorded lines
+ * (<who>/<hash>.mp3 listed in index.json, game/talk.js) - fetched one by one when a mascot says the line.
+ */
+export function createSfx({ audio, base = './sounds/', extra = [], voices = './voices/' }) {
   const raw = new Map(); const buf = new Map(); const decoding = new Set(); const playing = new Map();
   const fail = new Set();
+  let voiceSet = new Set();
+  fetch(voices + 'index.json').then((r) => (r.ok ? r.json() : [])).then((list) => { voiceSet = new Set(list); }).catch(() => {});
+  const voiceBuf = new Map(); // key -> AudioBuffer (the most recent few)
+  let voiceToken = 0;
   const ids = [...Object.keys(GAIN), ...extra];
   for (const id of ids) {
     fetch(base + (FILE[id] || id) + '.mp3')
@@ -72,6 +79,42 @@ export function createSfx({ audio, base = './sounds/', extra = [] }) {
         } else v.src.stop();
       } catch { /* already ended */ }
     },
+    /**
+     * A mascot says a recorded line (key = talk.js voiceKey): the one speaking before is cut short. Resolves to the
+     * line's length in seconds, or 0 when there is no recording or no sound yet. A line asked for while an older one
+     * was still loading wins: the older one is never played.
+     */
+    async speak(key, gain = 1) {
+      const my = ++voiceToken;
+      this.stop('voice', 0.08);
+      if (!voiceSet.has(key) || !live()) return 0;
+      let b = voiceBuf.get(key);
+      if (!b) {
+        try {
+          const r = await fetch(voices + key + '.mp3');
+          if (!r.ok) return 0;
+          const a = await r.arrayBuffer();
+          if (!audio.context) return 0;
+          b = await audio.context.decodeAudioData(a);
+        } catch { return 0; }
+        voiceBuf.set(key, b);
+        if (voiceBuf.size > 24) voiceBuf.delete(voiceBuf.keys().next().value);
+      }
+      if (my !== voiceToken || !live()) return 0;
+      const ctx = audio.context;
+      const src = ctx.createBufferSource();
+      src.buffer = b;
+      const g = ctx.createGain();
+      g.gain.value = 0.9 * gain;
+      src.connect(g).connect(audio.output || ctx.destination);
+      const voice = { src, g };
+      src.onended = () => { if (playing.get('voice') === voice) playing.delete('voice'); };
+      src.start();
+      playing.set('voice', voice);
+      return b.duration;
+    },
+    /** The mascot stops talking (fading out over `fade` s). */
+    hush(fade = 0.25) { voiceToken++; this.stop('voice', fade); },
     /** The file exists (it may still be decoding). */
     has(id) { return raw.has(id) || buf.has(id); },
     /** Resolves true once `id` can play (gesture made, decoded), false after `ms`. */

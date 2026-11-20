@@ -198,7 +198,7 @@ export const audio = {
 
   /** Very quiet warm room tone so the silence between flaps is not digital black. 0 gain disables it. */
   /** Generative soft felt-piano background (src/audio/music.js). gain 0 disables. */
-  music: { gain: 1.25, bpm: 63, reverb: 0.4, fadeIn: 4 },
+  music: { gain: 0.85, bpm: 63, reverb: 0.4, fadeIn: 4 }, // user 2026-11-20: a little quieter (was 1.25)
 
   ambience: { gain: 0.0008, length: 3.0, lpHz: 240, fadeIn: 1.5 },
 };

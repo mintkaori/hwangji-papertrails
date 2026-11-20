@@ -1,5 +1,5 @@
 // Pop-up Atlas composition root.
-// URL params: ?seed=N  ?quality=low|med|high  ?mute=1  ?hint=0  ?intro=0  ?night=1  ?life=0  ?animals=0
+// URL params: ?seed=N  ?quality=low|med|high (default: auto)  ?mute=1  ?hint=0  ?intro=0  ?night=1  ?life=0  ?animals=0
 import * as THREE from 'three';
 import { CONFIG, QUALITY, TILE_SIZE } from './core/config.js';
 import { bus } from './core/events.js';
@@ -14,6 +14,7 @@ import { createFollowCamera } from './camera/follow.js';
 import { createRenderer } from './render/renderer.js';
 import { createLights } from './render/lights.js';
 import { createPost } from './render/post.js';
+import { gpuTier, createGovernor } from './render/governor.js';
 import { createMaterials } from './render/materials.js';
 import { createPaperAudio } from './audio/paper.js';
 import { createMusic } from './audio/music.js';
@@ -33,7 +34,9 @@ const hypot2 = (a, b) => Math.sqrt(a * a + b * b);
 const params = new URLSearchParams(location.search);
 const seedParam = parseInt(params.get('seed') ?? '', 10);
 const seed = Number.isFinite(seedParam) ? seedParam : CONFIG.DEFAULT_SEED;
-const quality = QUALITY[params.get('quality')] ? params.get('quality') : CONFIG.DEFAULT_QUALITY;
+// ?quality=low|med|high pins a level; otherwise (auto) the GPU picks the start and render/governor.js keeps the fps
+const pinned = QUALITY[params.get('quality')] ? params.get('quality') : null;
+let quality = pinned || CONFIG.DEFAULT_QUALITY;
 const muted = params.get('mute') === '1';
 const showHint = params.get('hint') !== '0';
 const showIntro = params.get('intro') !== '0';
@@ -47,14 +50,41 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
 }
 
+/** The loading screen of index.html: progress 0..1 with a line of what is happening, then it fades away. */
+function loadingScreen() {
+  const el = document.getElementById('loading');
+  const bar = el && el.querySelector('.ld-fill');
+  const msg = el && el.querySelector('.ld-msg');
+  let shown = 0;
+  return {
+    step(p, text) {
+      if (!el) return;
+      shown = Math.max(shown, Math.min(1, p));
+      bar.style.transform = `scaleX(${shown.toFixed(3)})`;
+      if (text) msg.textContent = text;
+      el.setAttribute('aria-valuenow', String(Math.round(shown * 100)));
+    },
+    done() { if (!el) return; el.classList.add('done'); setTimeout(() => el.remove(), 1200); },
+    fail() { if (!el) return; el.classList.add('failed'); msg.textContent = '불러오지 못했어요. 새로고침해 주세요.'; },
+  };
+}
+const loading = loadingScreen();
+
 async function boot() {
   const canvas = document.getElementById('atlas');
   const hint = document.getElementById('hint');
 
   const scene = new THREE.Scene();
-  const { renderer, setSize: setRendererSize } = createRenderer({ canvas, quality });
+  loading.step(0.04, '종이를 고르는 중…');
+  const rend = createRenderer({ canvas, quality });
+  const { renderer, setSize: setRendererSize } = rend;
+  if (!pinned) { quality = gpuTier(renderer); rend.setQuality(quality); } // integrated graphics start lower
+  state.quality = quality;
   const materials = createMaterials({ quality });
+  THREE.DefaultLoadingManager.onProgress = (url, n, total) => loading.step(0.05 + 0.6 * (n / Math.max(1, total)));
   const assets = await loadAssets({ materials, renderer, quality });
+  THREE.DefaultLoadingManager.onProgress = () => {};
+  loading.step(0.68, '팝업북을 펼치는 중…');
   materials.setTextures(assets.textures);
   const lights = createLights({ scene, quality });
   const wfc = createWFC({ seed });
@@ -82,7 +112,7 @@ async function boot() {
   const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, weather, seed, sfx, intro: showIntro });
   // (the 수굴 spring of 황지연못: hj_pond is pinned at cell (1, 0), 상지's spring sits south of its middle)
   const fish = createFish({ scene, world, traveller, camera: follow.camera, assets, daynight, onLeap: (id, f, x, z) => npcs.sawCreature(id, x, z), springs: [[1 * TILE_SIZE + 0.32, 0 * TILE_SIZE + 0.48]] });
-  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life, audio, sfx };
+  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life, audio, sfx, get governor() { return governor; } };
   // N: day / night, M: music on / off (keys only - no on-screen UI)
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -133,7 +163,20 @@ async function boot() {
     post.setFocus(follow.focusPoint);
     post.render(dt);
     game.atlasmap.render(); // Drawn over the finished frame; no-op while closed.
+    if (governor) governor.tick();
   }
+
+  // ---- frame-rate governor (render/governor.js): steps quality / resolution to keep the fps on modest GPUs ----------
+  const governor = pinned ? null : createGovernor({
+    start: quality,
+    apply(rung, i, why) {
+      rend.setQuality(rung.level); rend.setScale(rung.scale);
+      post.setQuality(rung.level); lights.setQuality(rung.level); materials.setQuality(rung.level);
+      state.quality = rung.level;
+      resize();
+      console.info(`[quality] ${rung.level}${rung.scale < 1 ? ` x${rung.scale}` : ''} (${why})`);
+    },
+  });
 
   const loop = createLoop({ update, render });
 
@@ -170,6 +213,7 @@ async function boot() {
   }
 
   // ---- start ------------------------------------------------------------------------------------------
+  loading.step(0.86, '친구들을 부르는 중…');
   if (animals) await animals.ready;
   resize();
   const [x, z] = initialPosition();
@@ -185,10 +229,13 @@ async function boot() {
   lights.update(0, traveller, follow.camera);
   render(0);
   loop.start();
+  loading.step(1, '준비 완료!');
+  setTimeout(() => loading.done(), 380);
   npcs.startIntro(); // the short spoken guide to the trip, top centre
 }
 
 boot().catch((err) => {
   console.error('[atlas] boot failed', err);
+  loading.fail();
   throw err;
 });

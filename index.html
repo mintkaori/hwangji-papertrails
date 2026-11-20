@@ -52,11 +52,51 @@
       @media (max-width: 1100px) { #hint { border-radius: 18px; } }
       @media (max-width: 720px) { #hint { font-size: 14px; } }
       #hint.on { opacity: 1; }
+      /* The loading screen: the heroine's medallion floating in a warm paper glow, the title in storybook lettering, a
+         thin gold line for the progress (main.js loadingScreen), then it fades into the opening pop-up page. */
+      #loading {
+        position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; overflow: hidden;
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 0.9  0 0 0 0 0.75  0 0 0 0.055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+          radial-gradient(ellipse at 50% 40%, #3b2818 0%, #26180e 46%, #130b06 100%);
+        color: #fff3dc; transition: opacity 0.9s ease, visibility 0s linear 0.9s; cursor: default;
+      }
+      #loading.done { opacity: 0; visibility: hidden; }
+      #loading .ld-card { text-align: center; padding: 0 16px; animation: ldIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+      #loading .ld-medal { position: relative; width: 136px; height: 136px; margin: 0 auto 26px; animation: ldFloat 3.4s ease-in-out infinite; }
+      #loading .ld-medal img { position: relative; z-index: 1; width: 136px; height: 136px; border-radius: 50%; display: block;
+        box-shadow: 0 0 0 3px #f6e6c6, 0 0 0 7px rgba(246, 230, 198, 0.18), 0 14px 34px rgba(0, 0, 0, 0.45); }
+      #loading .ld-medal::before { content: ''; position: absolute; inset: -16px; border-radius: 50%;
+        border: 2px dashed rgba(255, 226, 176, 0.42); animation: ldSpin 22s linear infinite; }
+      #loading .ld-medal::after { content: ''; position: absolute; inset: -46px; border-radius: 50%; z-index: 0;
+        background: radial-gradient(circle, rgba(255, 206, 128, 0.3), rgba(255, 206, 128, 0) 68%); animation: ldGlow 3.4s ease-in-out infinite; }
+      #loading .ld-title { margin: 0; font: 700 clamp(30px, 5.2vw, 46px)/1.2 'Gowun Batang', 'Nanum Myeongjo', serif; letter-spacing: 0.08em;
+        color: #fff6e4; text-shadow: 0 2px 22px rgba(255, 196, 110, 0.22); }
+      #loading .ld-sub { margin: 10px 0 30px; font: 400 clamp(14px, 1.9vw, 16px)/1.5 'Gowun Batang', serif; letter-spacing: 0.05em; color: rgba(255, 238, 210, 0.72); }
+      #loading .ld-bar { width: min(280px, 64vw); height: 3px; margin: 0 auto; border-radius: 3px; overflow: hidden; background: rgba(255, 236, 200, 0.14); }
+      #loading .ld-fill { display: block; height: 100%; background: linear-gradient(90deg, #e9b65a, #ffe6ad); transform-origin: left center;
+        transform: scaleX(0); transition: transform 0.5s ease; box-shadow: 0 0 10px rgba(255, 210, 130, 0.6); }
+      #loading .ld-msg { margin: 13px 0 0; min-height: 1.4em; font: 400 14px/1.4 'Jua', 'Malgun Gothic', sans-serif; letter-spacing: 0.04em; color: rgba(255, 238, 210, 0.76); }
+      #loading.failed .ld-fill { background: #d9775c; box-shadow: none; }
+      @keyframes ldIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+      @keyframes ldFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+      @keyframes ldSpin { to { transform: rotate(360deg); } }
+      @keyframes ldGlow { 0%, 100% { opacity: 0.75; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.04); } }
+      @media (prefers-reduced-motion: reduce) { #loading .ld-medal, #loading .ld-medal::before, #loading .ld-medal::after { animation: none; } }
     </style>
   </head>
   <body>
     <canvas id="atlas" tabindex="0"></canvas>
     <div id="hint"><span>WASD 걷기</span><i>·</i> <span>클릭하면 길 찾아 걷기</span><i>·</i> <span>Shift 달리기</span><i>·</i> <span>Tab 지도</span><i>·</i> <span>B 도감</span><i>·</i> <span>N 밤</span><i>·</i> <span>M 음악</span><i>·</i> <span>V 시점</span><i>·</i> <span>Space 친구와 이야기</span></div>
+    <div id="loading" role="progressbar" aria-label="불러오는 중" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="ld-card">
+        <div class="ld-medal"><img src="./icons/icon-192.png" alt="" width="136" height="136" /></div>
+        <h1 class="ld-title">황지 페이퍼트레일</h1>
+        <p class="ld-sub">하늘이와 함께 떠나는 종이 팝업북 태백 여행</p>
+        <div class="ld-bar"><span class="ld-fill"></span></div>
+        <p class="ld-msg">종이를 고르는 중…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

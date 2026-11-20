@@ -5,12 +5,14 @@
 // by reading time with a small note under them; the first click or key reads the line that is up aloud, and the rest
 // follow with the voice. If INTRO changes, record the lines again. main.js: ?intro=0 skips it.
 
+/** The heroine (player/girl.js), who tells the opening story herself. */
+export const HERO = '하늘이';
 export const INTRO = [
-  '안녕! 하늘과 가까운 고원도시, 태백에 온 걸 환영해.',
+  `안녕! 나는 ${HERO}야. 하늘과 가까운 고원도시, 태백에 온 걸 환영해.`,
   '우리 여행은 황지중앙초등학교 앞에서 시작해.',
   '길을 따라 멀리 걸어가면 여름, 가을, 겨울의 태백이 차례로 펼쳐져.',
   '멋진 장소나 친구를 가까이에서 만나면 도감에 쏙 담겨. B를 눌러 펼쳐 봐!',
-  '자, 그럼 태백 여행을 떠나 볼까?',
+  '자, 그럼 나랑 같이 태백 여행을 떠나 볼까?',
 ];
 
 /** ui: game/paperui.js; sfx: audio/sfx.js (gestures, mute, voice files). */

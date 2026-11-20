@@ -8,9 +8,9 @@
 // with a picture, the short line and the long story.
 
 const FONT = "'Jua', 'BM JUA_TTF', 'BM JUA_OTF', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif";
-/** The discoveries are lettered like a printed storybook (Gowun Batang, index.html) in dark ink with a paper glow. */
+/** The discoveries are lettered like a printed storybook (Gowun Batang, index.html): bold white on a dark halo. */
 const BOOK = "'Gowun Batang', 'Nanum Myeongjo', 'AppleMyungjo', 'Batang', serif";
-const INK_HALO = '0 0 2px rgba(255, 250, 238, 0.95), 0 0 7px rgba(255, 248, 232, 0.9), 0 0 16px rgba(255, 246, 226, 0.75), 0 0 30px rgba(255, 244, 220, 0.5)';
+const DARK_HALO = '0 0 2px rgba(28, 16, 6, 0.95), 0 0 6px rgba(28, 16, 6, 0.85), 0 2px 12px rgba(20, 12, 4, 0.7), 0 0 26px rgba(20, 12, 4, 0.45)';
 const SOFT = '0 1px 2px rgba(20, 12, 4, 0.55)';
 const PANEL = 'rgba(34, 22, 12, 0.66)';
 const PANEL_HOVER = 'rgba(52, 34, 18, 0.8)';
@@ -45,12 +45,12 @@ const CSS = `
   padding: 16px 30px 14px; text-align: center; font-size: clamp(20px, 2.7vw, 28px); line-height: 1.5; }
 .hj-intro::before { border-radius: 20px; }
 .hj-intro .s { margin-top: 8px; font-size: 0.62em; }
-/* a discovery: no box - big storybook lettering in ink, written in by hand (.write) and blown away by the wind */
+/* a discovery: no box - big bold white storybook lettering, written in by hand (.write) and blown away by the wind */
 .hj-narr { left: 0; right: 0; margin: 0 auto; top: 52vh; width: min(920px, 94vw); text-align: center; font-family: ${BOOK};
-  color: #3b2716; text-shadow: ${INK_HALO}; font-size: clamp(19px, 2.5vw, 27px); line-height: 1.45; }
-.hj-narr .t { color: #33200f; font-weight: 700; font-size: clamp(34px, 4.8vw, 56px); letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 8px; }
-/* handwriting: each letter is inked in from the left, one after another (--step apart), the fresh ink a little lighter */
-.hj-ui.write .w { opacity: 1; transform: none; filter: none; color: #86603e; clip-path: inset(-45% 160% -45% -60%);
+  color: #fffdf6; font-weight: 700; text-shadow: ${DARK_HALO}; font-size: clamp(20px, 2.6vw, 28px); line-height: 1.45; }
+.hj-narr .t { color: #ffffff; font-weight: 700; font-size: clamp(36px, 5vw, 58px); letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 8px; }
+/* handwriting: each letter is inked in from the left, one after another (--step apart), the fresh stroke a little warm */
+.hj-ui.write .w { opacity: 1; transform: none; filter: none; color: #f3dcb4; clip-path: inset(-45% 160% -45% -60%);
   transition: clip-path 0.22s cubic-bezier(0.35, 0.1, 0.55, 1), color 0.9s ease;
   transition-delay: calc(var(--i) * var(--step, 60ms)); }
 .hj-ui.write.in .w { clip-path: inset(-45% -60% -45% -60%); color: inherit; }
@@ -58,10 +58,10 @@ const CSS = `
   transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.86);
   transition: opacity 0.75s ease-in, transform 1.05s cubic-bezier(0.55, 0, 0.85, 0.55), filter 0.75s ease-in;
   transition-delay: calc(var(--i) * 10ms); }
-.hj-season { left: 0; right: 0; margin: 0 auto; top: 24vh; width: max-content; max-width: 92vw; padding: 14px 40px 16px; text-align: center; }
-.hj-season::before { border-radius: 24px; }
-.hj-season .t { color: #fffaf0; font-size: clamp(36px, 6vw, 64px); letter-spacing: 0.08em; }
-.hj-season .s { font-size: clamp(17px, 2.2vw, 23px); letter-spacing: 0.14em; }
+/* a new season ring: no box either - big white title on a dark halo */
+.hj-season { left: 0; right: 0; margin: 0 auto; top: 24vh; width: max-content; max-width: 92vw; text-align: center; text-shadow: ${DARK_HALO}; }
+.hj-season .t { color: #ffffff; font-size: clamp(40px, 6.4vw, 70px); letter-spacing: 0.08em; }
+.hj-season .s { color: #fff6e4; font-size: clamp(18px, 2.3vw, 25px); letter-spacing: 0.14em; }
 .hj-badge { left: 14px; top: 12px; padding: 7px 15px 6px; font-size: 17px; letter-spacing: 0.03em; white-space: nowrap; }
 .hj-badge::before, .hj-sky::before { border-radius: 999px; }
 .hj-sky { left: 14px; top: 54px; padding: 7px 15px 6px; font-size: 16px; max-width: min(580px, 84vw); }
