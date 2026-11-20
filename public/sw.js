@@ -4,7 +4,7 @@
 // - Everything else from this site (textures, models, sounds, icons) and the Jua web font: stale-while-revalidate -
 //   answered from the cache at once, refreshed in the background for next time.
 // Bump VERSION to drop every old cache.
-const VERSION = 'v2'; // v2: the hero (girl in a straw hat) icons
+const VERSION = 'v3'; // v3: the GPT-drawn 2D face icons, the writing sound and the book font
 const CACHE = 'hwangji-' + VERSION;
 const CORE = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 

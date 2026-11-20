@@ -8,6 +8,9 @@
 // with a picture, the short line and the long story.
 
 const FONT = "'Jua', 'BM JUA_TTF', 'BM JUA_OTF', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif";
+/** The discoveries are lettered like a printed storybook (Gowun Batang, index.html) in dark ink with a paper glow. */
+const BOOK = "'Gowun Batang', 'Nanum Myeongjo', 'AppleMyungjo', 'Batang', serif";
+const INK_HALO = '0 0 2px rgba(255, 250, 238, 0.95), 0 0 7px rgba(255, 248, 232, 0.9), 0 0 16px rgba(255, 246, 226, 0.75), 0 0 30px rgba(255, 244, 220, 0.5)';
 const SOFT = '0 1px 2px rgba(20, 12, 4, 0.55)';
 const PANEL = 'rgba(34, 22, 12, 0.66)';
 const PANEL_HOVER = 'rgba(52, 34, 18, 0.8)';
@@ -42,11 +45,19 @@ const CSS = `
   padding: 16px 30px 14px; text-align: center; font-size: clamp(20px, 2.7vw, 28px); line-height: 1.5; }
 .hj-intro::before { border-radius: 20px; }
 .hj-intro .s { margin-top: 8px; font-size: 0.62em; }
-/* a discovery: the name, the short line, where to read more */
-.hj-narr { left: 0; right: 0; margin: 0 auto; top: 57vh; width: max-content; max-width: min(760px, 92vw);
-  padding: 14px 26px 12px; text-align: center; font-size: clamp(18px, 2.3vw, 22px); line-height: 1.5; }
-.hj-narr .t { font-size: 1.3em; letter-spacing: 0.04em; margin-bottom: 2px; }
-.hj-narr .s { margin-top: 6px; }
+/* a discovery: no box - big storybook lettering in ink, written in by hand (.write) and blown away by the wind */
+.hj-narr { left: 0; right: 0; margin: 0 auto; top: 52vh; width: min(920px, 94vw); text-align: center; font-family: ${BOOK};
+  color: #3b2716; text-shadow: ${INK_HALO}; font-size: clamp(19px, 2.5vw, 27px); line-height: 1.45; }
+.hj-narr .t { color: #33200f; font-weight: 700; font-size: clamp(34px, 4.8vw, 56px); letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 8px; }
+/* handwriting: each letter is inked in from the left, one after another (--step apart), the fresh ink a little lighter */
+.hj-ui.write .w { opacity: 1; transform: none; filter: none; color: #86603e; clip-path: inset(-45% 160% -45% -60%);
+  transition: clip-path 0.22s cubic-bezier(0.35, 0.1, 0.55, 1), color 0.9s ease;
+  transition-delay: calc(var(--i) * var(--step, 60ms)); }
+.hj-ui.write.in .w { clip-path: inset(-45% -60% -45% -60%); color: inherit; }
+.hj-ui.write.gust .w { clip-path: inset(-45% -60% -45% -60%); color: inherit; opacity: 0; filter: blur(2px);
+  transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.86);
+  transition: opacity 0.75s ease-in, transform 1.05s cubic-bezier(0.55, 0, 0.85, 0.55), filter 0.75s ease-in;
+  transition-delay: calc(var(--i) * 10ms); }
 .hj-season { left: 0; right: 0; margin: 0 auto; top: 24vh; width: max-content; max-width: 92vw; padding: 14px 40px 16px; text-align: center; }
 .hj-season::before { border-radius: 24px; }
 .hj-season .t { color: #fffaf0; font-size: clamp(36px, 6vw, 64px); letter-spacing: 0.08em; }
@@ -191,6 +202,7 @@ export function createPaperUI({ sound = () => {} } = {}) {
     return {
       el,
       get shown() { return shown; },
+      /** Returns the number of letters (a written slot takes count x --step to write). */
       show(rows, hold = 0) {
         clear();
         el.classList.remove('gust', 'in');
@@ -200,6 +212,7 @@ export function createPaperUI({ sound = () => {} } = {}) {
         el.classList.add('in');
         shown = true;
         if (hold > 0) timer = setTimeout(() => this.gust(), hold * 1000);
+        return count;
       },
       gust() {
         if (!shown) return;

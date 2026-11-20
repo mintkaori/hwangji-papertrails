@@ -35,13 +35,23 @@ vec2 terrainGrad(vec2 p) {
 }
 `;
 
-/** GLSL (vertex, after begin_vertex): lift a batched tile vertex onto the terrain (world-up offset in object space). */
+/**
+ * GLSL (vertex, after begin_vertex): lift a batched tile vertex onto the terrain - a WORLD-up offset, expressed in
+ * object space through the instance's axes (o_i = dot(axis_i, up) / |axis_i|^2, exact for rotate-and-scale matrices).
+ * It used to add the height to the object's own y, which is only right while the piece's y axis points up: a turning
+ * windmill rotor (its y spins in the card plane) was pushed round in a circle by the hill height, so on 매봉산's hills
+ * the rotors orbited off their towers instead of turning on the hub.
+ */
 export const TERRAIN_BATCH_VERTEX = /* glsl */ `
 #ifdef USE_BATCHING
 {
   mat4 tM = modelMatrix * batchingMatrix;
   vec3 tW = ( tM * vec4( transformed, 1.0 ) ).xyz;
-  transformed.y += terrainH( tW.xz ) / max( 1e-4, length( tM[ 1 ].xyz ) );
+  float tH = terrainH( tW.xz );
+  transformed += tH * vec3(
+    tM[ 0 ].y / max( 1e-8, dot( tM[ 0 ].xyz, tM[ 0 ].xyz ) ),
+    tM[ 1 ].y / max( 1e-8, dot( tM[ 1 ].xyz, tM[ 1 ].xyz ) ),
+    tM[ 2 ].y / max( 1e-8, dot( tM[ 2 ].xyz, tM[ 2 ].xyz ) ) );
 }
 #endif
 `;

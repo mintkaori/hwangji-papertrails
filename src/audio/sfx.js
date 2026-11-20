@@ -1,8 +1,9 @@
 // 황지 페이퍼트레일: the UI sounds - short ElevenLabs sound effects in public/sounds/ (the 도감 card popping out of a
-// find and landing in the book, the book opening and closing, a page turning, a mascot's speech bubble, a new season).
+// find and landing in the book, a pencil writing the find's name, the book opening and closing, a page turning, a
+// mascot's speech bubble, a new season).
 // They play through the paper audio's AudioContext into its master gain, so ?mute=1 and the master mute hold.
 // Browsers only start audio inside a user gesture: any key or click (not just walking) unlocks it here.
-const GAIN = { discover: 0.55, collect: 0.6, open: 0.55, close: 0.4, page: 0.42, talk: 0.32, season: 0.42 };
+const GAIN = { discover: 0.55, collect: 0.6, write: 0.5, open: 0.55, close: 0.4, page: 0.42, talk: 0.32, season: 0.42 };
 const FILE = { open: 'book_open', close: 'book_close' };
 
 /** extra: more file names (without .mp3) to load, e.g. voice lines. */
@@ -49,13 +50,28 @@ export function createSfx({ audio, base = './sounds/', extra = [] }) {
       const g = ctx.createGain();
       g.gain.value = (GAIN[id] ?? (id.startsWith('intro_') ? 0.85 : 1)) * gain;
       src.connect(g).connect(audio.output || ctx.destination);
-      src.onended = () => { if (playing.get(id) === src) playing.delete(id); };
+      const voice = { src, g };
+      src.onended = () => { if (playing.get(id) === voice) playing.delete(id); };
       src.start();
-      playing.set(id, src);
+      playing.set(id, voice);
       return b.duration;
     },
-    /** Stop a sound that is still playing. */
-    stop(id) { const s = playing.get(id); if (s) { try { s.stop(); } catch { /* ended */ } playing.delete(id); } },
+    /** Stop a sound that is still playing - at once, or fading out over `fade` seconds. */
+    stop(id, fade = 0) {
+      const v = playing.get(id);
+      if (!v) return;
+      playing.delete(id);
+      const ctx = audio.context;
+      try {
+        if (fade > 0 && ctx) {
+          const t = ctx.currentTime;
+          v.g.gain.cancelScheduledValues(t);
+          v.g.gain.setValueAtTime(v.g.gain.value, t);
+          v.g.gain.linearRampToValueAtTime(0, t + fade);
+          v.src.stop(t + fade + 0.02);
+        } else v.src.stop();
+      } catch { /* already ended */ }
+    },
     /** The file exists (it may still be decoding). */
     has(id) { return raw.has(id) || buf.has(id); },
     /** Resolves true once `id` can play (gesture made, decoded), false after `ms`. */

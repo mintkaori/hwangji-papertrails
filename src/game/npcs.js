@@ -195,7 +195,10 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
   if (typeof document === 'undefined') return { update() {}, sawCreature() {}, startIntro() {}, modal: () => false, dispose() {} };
   const sound = (id, gain) => (sfx ? sfx.play(id, gain) : 0);
   const ui = createPaperUI({ sound });
-  const narr = ui.slot('hj-narr panel'); const season = ui.slot('hj-season panel'); const badge = ui.slot('hj-badge panel');
+  // a discovery has no box: it is written in by hand (with the sound of a pencil) and blown away by the wind
+  const WRITE_STEP = 0.06; // s between two letters being written
+  const narr = ui.slot('hj-narr write'); const season = ui.slot('hj-season panel'); const badge = ui.slot('hj-badge panel');
+  narr.el.style.setProperty('--step', Math.round(WRITE_STEP * 1000) + 'ms');
   const sky = ui.slot('hj-sky panel'); const story = ui.slot('hj-story panel'); const bubble = ui.slot('hj-bubble panel');
   const opening = intro ? createIntro({ ui, sfx, voiceFiles: true }) : null; // recorded voice (public/sounds/intro_N.mp3)
   const ATLAS = './textures/art/atlas.webp'; const ANIMALS = './textures/art/animals.png';
@@ -224,8 +227,8 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
   const count = () => found.size + seen.size + met.size;
   ui.setCount(count(), TOTAL);
 
-  // ---- discoveries: a card flies into the 도감, a line of narration rises and blows away -----------------------------
-  const queue = []; let busy = 0; let gap = 0;
+  // ---- discoveries: a card flies into the 도감, its name and line are written in by hand and blow away ----------------
+  const queue = []; let busy = 0; let gap = 0; let penStop = 0;
   const _p = new THREE.Vector3();
   function screenOf(x, y, z) {
     _p.set(x, y, z).project(camera);
@@ -236,6 +239,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
   function discover(kind, title, line, at, name, pic) {
     const [sx, sy] = at ? screenOf(at[0], at[1], at[2]) : [window.innerWidth / 2, window.innerHeight * 0.3];
     ui.flyToDex(sx, sy, { name, icon: KIND_ICON[kind], pic: picOf(pic) }, () => ui.setCount(count(), TOTAL));
+    if (busy <= 0 && !queue.length) gap = Math.max(gap, 0.35); // the card pops first, then the pen starts
     queue.push([title, line]);
   }
   function narrate(dt) {
@@ -243,8 +247,11 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     if (gap > 0) { gap -= dt; return; }
     if (!queue.length) return;
     const [title, line] = queue.shift();
-    narr.show([{ text: title, cls: 't' }, { text: line }, { text: '도감에 담았어요 · B로 자세히 보기', cls: 's' }]);
-    busy = 5.2;
+    const letters = narr.show([{ text: title, cls: 't' }, { text: line }]);
+    const writing = letters * WRITE_STEP + 0.25; // the last letter is inked in by then
+    // the pencil scratches while the letters are written, and lifts off when the line is done
+    if (sfx && sfx.play('write') > 0) { clearTimeout(penStop); penStop = setTimeout(() => sfx.stop('write', 0.3), writing * 1000); }
+    busy = writing + 2.8; // time to read it, then the wind takes it
   }
 
   // ---- places, seasons, legends ------------------------------------------------------------------------------------
@@ -295,7 +302,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
           const kind = FESTIVALS[id] ? 'festival' : LEGEND_DEX[id] ? 'legend' : 'place';
           const pic = LEGEND_DEX[id] ? LEGEND_DEX[id][2] : PLACES[id][3];
           const hx = (cx * TILE_SIZE + p.x) / 2; const hz = (cz * TILE_SIZE + p.z) / 2; // between him and the middle of the place
-          discover(kind, `${KIND_ICON[kind]} ${PLACES[id][0]}`, PLACES[id][1], [hx, (world.heightAt ? world.heightAt(hx, hz) : 0) + 0.55, hz], PLACES[id][0], pic);
+          discover(kind, PLACES[id][0], PLACES[id][1], [hx, (world.heightAt ? world.heightAt(hx, hz) : 0) + 0.55, hz], PLACES[id][0], pic);
         }
       }
     }
@@ -390,7 +397,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     // a new friend goes into the 도감 once he has walked right up to it
     if (MASCOTS[talking] && !met.has(talking) && hit.id === talking && hit.d <= CONTACT.friend) {
       met.add(talking); save(KEY_F, met);
-      discover('friend', `🧸 친구 ${MASCOTS[talking].name}`, MASCOTS[talking].self[0], [hit.x, hit.y + 0.4, hit.z], MASCOTS[talking].name, 'a:' + talking);
+      discover('friend', `친구 ${MASCOTS[talking].name}`, MASCOTS[talking].self[0], [hit.x, hit.y + 0.4, hit.z], MASCOTS[talking].name, 'a:' + talking);
     }
     _p.set(hit.x, hit.y + 0.7, hit.z).project(camera);
     if (_p.z > 1) return;
@@ -419,7 +426,7 @@ export function createNpcs({ animals, world, traveller, camera, weather = null, 
     seen.add(id); save(KEY_C, seen);
     const c = CREATURES[id];
     const at = x === undefined ? null : [x, y !== undefined ? y : (world.heightAt ? world.heightAt(x, z) : 0) + 0.2, z];
-    discover('creature', `${c[0]} ${c[1]}`, c[2], at, c[1], c[5]);
+    discover('creature', c[1], c[2], at, c[1], c[5]);
   }
   /** He stands at the water's edge: water within CONTACT.shore of (x, z). */
   function atShore(x, z) {
