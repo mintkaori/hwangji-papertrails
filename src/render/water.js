@@ -206,12 +206,75 @@ vec2 wPad(vec2 c, float r, float turn, float aa) {
 }
 
 /**
+ * 황지 페이퍼트레일 (weak GPUs, quality lod 2): the light GROUND PRINT. Same ground / road / bare-earth repaint as the full
+ * body below, but read straight from the print (no hand-cut wobble, no extra deep read for the road edge), two mottle
+ * octaves instead of three, a one-octave grain on the road edge, and no pebbles, grass ticks or flower dots.
+ * Same inputs and outputs as groundBodyGLSL.
+ */
+function groundLiteGLSL(g) {
+  const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
+  const v3 = (a) => `vec3(${a.map((v) => v.toFixed(4)).join(', ')})`;
+  const GC = lin(g.groundColor || GROUND_DEFAULTS.groundColor);
+  const PC = lin(g.pathColor || GROUND_DEFAULTS.pathColor);
+  const fl = (v, d = 4) => (+v).toFixed(d);
+  const gmin = (Math.pow(2, g.soften) / 512).toFixed(6);
+  return /* glsl */ `
+  vec2 wq = p + uWorld0;
+  float wpx = max(fwidth(p.x), fwidth(p.y));
+  float waW = fwidth(base4.a);
+  float isProp = smoothstep(0.03, 0.12, distance(base4.rgb, flat_));
+  vec3 base = base4.rgb;
+  gPathM = pathMask(base4.rgb) * float((gb >> 5) & 1);
+  {
+    const vec3 GC = ${v3(GC)}; const vec3 PC = ${v3(PC)};
+    const vec2 CG0 = vec2(1.02, 0.535); const vec2 CKD = vec2(0.212, 0.11); const float CKD2 = 0.05704;
+    float gfp = max(max(length(dx), length(dy)), 1e-6);
+    vec3 gcol = textureGrad(uAtlas, vec3(uv, layer), dx * max(1.0, ${gmin} / gfp), dy * max(1.0, ${gmin} / gfp)).rgb;
+    vec2 dS = gcol.rb / max(gcol.g, 1e-3) - CG0;
+    float tS = dot(dS, CKD) / CKD2;
+    float perpS = length(dS - CKD * clamp(tS, -0.15, 1.15));
+    float lumOk = smoothstep(0.14, 0.22, gcol.g);
+    float isG = (1.0 - smoothstep(0.12, 0.17, perpS)) * (1.0 - smoothstep(0.22, 0.4, tS)) * lumOk;
+    float pbit = float((gb >> 5) & 1) * step(0.001, uGnd.w);
+    float bare = (1.0 - smoothstep(0.07, 0.12, perpS)) * smoothstep(0.22, 0.4, tS) * lumOk * (1.0 - pbit) * step(0.001, uGnd.w);
+    isG = max(isG, bare * 0.9);
+    int cBio = (gb >> 2) & 7;
+    if (cBio == 1 || cBio == 2) {
+      vec3 tm = textureGrad(uAtlas, vec3(0.5, 0.5, layer), vec2(1.0, 0.0), vec2(0.0, 1.0)).rgb;
+      vec2 tc = tm.rb / max(tm.g, 1e-3);
+      float own = smoothstep(0.06, 0.12, length(tc - CG0));
+      float isO = (1.0 - smoothstep(0.035, 0.07, length(gcol.rb / max(gcol.g, 1e-3) - tc))) * lumOk * (cBio == 2 ? 0.75 : 1.0);
+      isG = mix(isG, isO, own);
+    }
+    float pmS = 0.0; float onLine = 0.0;
+    if (pbit > 0.5) {
+      onLine = (1.0 - smoothstep(0.045, 0.085, perpS)) * lumOk * pbit;
+      float kS = clamp(tS, 0.0, 1.0) * onLine;
+      pmS = smoothstep(0.47, 0.69, kS + (wNoise(wq + 9.1, 6.0) - 0.5) * 0.2) * onLine;
+      gPathM = pmS;
+    }
+    float open = 1.0 - pmS;
+    float contact = (1.0 - smoothstep(0.29, 0.42, gcol.g)) * isG;
+    gcol = mix(gcol, GC, mix(isG * ${fl(g.flatten)}, 1.0, onLine) * open);
+    gcol *= 1.0 - ${fl(g.contact)} * contact * open * vec3(0.9, 1.0, 1.15);
+    float m1 = wNoise(wq, 1.0) - 0.5; float m3 = wNoise(wq + 4.4, 0.5) - 0.5;
+    float mot = (m3 + m1) * 1.1;
+    gcol *= 1.0 + uGnd.x * mot * (0.45 + 0.55 * open);
+    gcol *= vec3(1.0) + uGnd.x * 0.6 * (m1 + m3) * vec3(0.9, 0.05, -1.1) * open;
+    if (pbit > 0.5) gcol = mix(gcol, PC * (1.0 + 0.5 * uGnd.x * mot), pmS * uGnd.w);
+    base = gcol;
+  }
+`;
+}
+
+/**
  * GROUND PRINT body. Runs right after the base / twin fetches of pageColor().
  * In: p, f, uv, dx, dy, layer, gb, base4 (crisp base print, rgba), flat_. Out: base (vec3), isProp, wq, wpx.
  */
-export function groundBodyGLSL(bakeSize) {
+export function groundBodyGLSL(bakeSize, lod = 0) {
   const g = groundConfig();
   const on = g.enabled !== false;
+  if (on && lod >= 2) return groundLiteGLSL(g);
   const gmin = (Math.pow(2, g.soften) / 512).toFixed(6); // uv footprint of the soft read (independent of bake size)
   // round 3 (page): the tile builders print ONE ground tone on every tile and one kraft tone for every road, but the
   // bake carries a strong per-tile value gradient (measured in the atlas, linear: tile centre 0.30, edge middle 0.40,
@@ -294,18 +357,19 @@ export function groundBodyGLSL(bakeSize) {
       gcol = mix(gcol, mix(gcol, PC, 0.12), halo * uGnd.w);
       gcol = mix(gcol, pcol, pmS * uGnd.w);
       gcol *= 1.0 - 0.07 * fringe * open * uGnd.w * vec3(1.0, 0.8, 1.1);        // darker, greener fringe outside the cut
-      // small pebbles biting into the margin
+      ${lod >= 1 ? '' : /* glsl */ `// small pebbles biting into the margin
       vec2 pg = wq * 11.0; vec2 pid = mod(floor(pg), 2816.0); float phh = wHash(pid + 13.7);
       vec2 pc = (fract(pg) - 0.5) / 11.0 - (vec2(wHash(pid + 4.1), wHash(pid + 19.3)) - 0.5) * 0.045;
       float pr_ = 0.015 + 0.016 * fract(phh * 9.7);
       float pl = length(pc * vec2(1.0, 1.45));
       float peb = (1.0 - smoothstep(pr_ - wpx, pr_ + wpx, pl)) * step(phh, 0.5 * fringe + 0.02 * pmS) * uGnd.w;
       vec3 pebC = mix(vec3(0.5, 0.4, 0.29), vec3(0.93, 0.8, 0.62), smoothstep(pr_ * 0.5, -pr_ * 0.4, pc.y + pc.x * 0.4));
-      gcol = mix(gcol, pebC * mix(1.0, 0.8, smoothstep(pr_ * 0.75, pr_, pl)), peb);
+      gcol = mix(gcol, pebC * mix(1.0, 0.8, smoothstep(pr_ * 0.75, pr_, pl)), peb);`}
     }
     // printed grass ticks and flower dots, in drifts, on open ground and biting into the road margin
+    // (황지: quality lod >= 1 leaves them out - a few pixels each at play distance on the levels that use it)
     float grassy = max(isG * open, fringe * 0.85) * (1.0 - smoothstep(0.02, 0.2, base4.a));
-    if (grassy * uGnd.y > 0.01) {
+    if (${lod >= 1 ? 'false' : 'true'} && grassy * uGnd.y > 0.01) {
       vec2 cg = wq * 5.0; vec2 cid = mod(floor(cg), 1280.0);
       float ch = wHash(cid + 3.1); float ch2 = wHash(cid + 57.7);
       float clus = smoothstep(0.52, 0.7, wNoise(wq + 5.1, 0.75));
@@ -547,7 +611,64 @@ export function renderReflection(renderer, scene, camera, width, height, quality
   U.uRefl2.value.set(m.ice, m.band, m.night, 3.0 / tw);
 }
 
-export function waterBodyGLSL(kinds) {
+/**
+ * 황지 페이퍼트레일 (weak GPUs, quality lod 2): the light WATER body. Keeps the stepped depth tones, the slow light net,
+ * the waterline, the cream shore line and the sandy bank; the rings, lily pads, floaters, foam, river dashes along the
+ * flow, the printed far-bank band and the mirror hooks give way to the pond's sparse drifting dashes on every water.
+ * Same contract as below.
+ */
+function waterLiteGLSL(kinds) {
+  const chain = kinds.map((k) => `if (mi == ${k.index}) { wk = ${k.kind}; wd = vec3(${k.disc ? [k.disc[0] / (TILE_SIZE / 2), k.disc[1] / (TILE_SIZE / 2), k.disc[2] / (TILE_SIZE / 2)].map((v) => v.toFixed(4)).join(', ') : '0.0, 0.0, 1.0'}); }`).join(' else ');
+  return /* glsl */ `
+  gWatGlow = 0.0; gWatRefl = vec4(0.0); gWatCol = vec3(0.0);
+  {
+    int mi = int(layer * 0.5 + 0.25);
+    int wk = 0; vec3 wd = vec3(0.0, 0.0, 1.0);
+    ${chain}
+    if (wk > 0 && uWat2.w > 0.5) {
+      float T = uWat.x;
+      float wa = base4.a;
+      float aw = clamp(waW * 0.75, 0.008, 0.12);
+      float wm = smoothstep(0.5 - aw, 0.5 + aw, wa);
+      #define WPAL(o) (w0 * uWatPal[b0 * 4 + o] + w1 * uWatPal[b1 * 4 + o] + w2 * uWatPal[b2 * 4 + o] + w3 * uWatPal[b3 * 4 + o])
+      vec3 cSh = WPAL(0); vec3 cDp = WPAL(1); vec3 cRim = WPAL(2);
+      float ice = wk == 6 ? 1.0 : 0.0;
+      float dpt = smoothstep(0.55, 1.0, wa);
+      if (wk == 1 || wk == 6) dpt = max(dpt * 0.45, 1.0 - smoothstep(0.1, 0.95, distance(l, wd.xy) / wd.z));
+      float dpn = dpt + 0.16 * (wNoise(wq, 3.0) - 0.5);
+      float dst = 0.3 * smoothstep(0.13, 0.2, dpn) + 0.3 * smoothstep(0.38, 0.46, dpn) + 0.36 * smoothstep(0.66, 0.76, dpn);
+      vec3 W = mix(cSh, cDp, mix(dpt, dst, 0.62 * (1.0 - ice)));
+      float inner = smoothstep(0.62, 0.9, wa);
+      if (ice < 0.5) {
+        float ca = sin(wq.x * WKF(1250) + 1.4 * sin(wq.y * WKF(900) + T * 0.55)) * sin(wq.y * WKF(1500) + 1.2 * sin(wq.x * WKF(1050) - T * 0.4));
+        W *= 1.0 + uWat2.y * (smoothstep(0.3, 0.95, ca) - 0.5 * smoothstep(0.3, 0.95, -ca));
+        // a few drifting, slowly twinkling cream dashes - the pond's, one hash per cell (a product of two sines here
+        // printed a regular lattice of dots over all the water)
+        vec2 q = vec2(wq.x - 0.03 * T, wq.y) / vec2(0.5, 0.125);
+        vec2 id = mod(floor(q), vec2(512.0, 2048.0));
+        float h = wHash(id + 1.7);
+        vec2 c = (fract(q) - 0.5) * vec2(0.5, 0.125); c.x += (wHash(id + 9.2) - 0.5) * 0.1;
+        float rip = step(h, 0.1) * wLens(c + vec2(0.0, 0.012 * (1.0 - c.x * c.x / 0.0256)), 0.12 + 0.07 * fract(h * 7.3), 0.011, wpx) * (0.4 + 0.6 * (0.5 + 0.5 * sin(T * 0.8 + h * 40.0)));
+        W = mix(W, mix(cRim, vec3(1.0), 0.6), rip * inner * uWat.y);
+      } else {
+        W = mix(W, cRim, smoothstep(0.55, 0.95, sin((wq.x * 0.8 + wq.y) * WKF(260))) * 0.3);
+      }
+      gWatCol = W;
+      W *= 1.0 - 0.42 * wm * (1.0 - smoothstep(0.52, 0.62, wa));
+      float rimLine = smoothstep(0.31, 0.38, wa);
+      float rimM = max(rimLine * 0.94, smoothstep(0.13, 0.39, wa) * 0.58) * (1.0 - wm);
+      vec3 sandC = mix(base * vec3(1.16, 1.08, 0.9) + vec3(0.03, 0.02, 0.0), cRim, 0.55);
+      base = mix(base, mix(sandC, cRim, rimLine), rimM);
+      base = mix(base, W, wm);
+      gWatGlow = wm;
+    }
+    flat_ = mix(base, flat_, isProp);
+  }
+`;
+}
+
+export function waterBodyGLSL(kinds, lod = 0) {
+  if (lod >= 2) return waterLiteGLSL(kinds);
   const H = (TILE_SIZE / 2).toFixed(3);
   const chain = kinds.map((k) => `if (mi == ${k.index}) { wk = ${k.kind}; wd = vec3(${k.disc ? [k.disc[0] / (TILE_SIZE / 2), k.disc[1] / (TILE_SIZE / 2), k.disc[2] / (TILE_SIZE / 2)].map((v) => v.toFixed(4)).join(', ') : '0.0, 0.0, 1.0'}); }`).join(' else ');
   return /* glsl */ `

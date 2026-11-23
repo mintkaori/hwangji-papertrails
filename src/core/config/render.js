@@ -61,6 +61,7 @@ export const lights = {
     leak: '#7c5634', // warm light leaking into the key shadow (bounce off cream paper)
     stockLeak: 0.05, // same for non-paper materials (scalar)
     sheetThickness: 0.07, // blockers closer than this (world, along the light) count as "the sheet itself" for back-lit translucency
+    gridTexels: 1.6, // quality shadowPcf 'grid' (weak GPUs): spacing of the 2 x 2 bilinear filter, in shadow-map texels
   },
   /** Paper response. */
   paper: {
@@ -148,11 +149,20 @@ export const post = {
 /**
  * Quality levels. dofTaps = bokeh gather taps at half res; shadowTaps = [blocker search, PCF];
  * msaa = samples of the HDR scene target; aoTaps 0 = no contact-darkening pass.
+ * 황지 페이퍼트레일 (user 2026-11-24: hold the frame rate on a Galaxy Tab S6 Lite / integrated graphics):
+ *   lod        shader detail of the page and the paper cards (0 full; 1 no close-up ink: no grass ticks, flower dots or
+ *              pebbles on the ground, no pale cut-edge rim on the printed art, one fibre octave on the cards; 2 the light
+ *              print: a plainer ground and plain water with a few drifting dashes, one fibre read, no paper relief)
+ *   post       'full' = AO / depth-of-field / bloom passes + composite; 'lite' = the composite alone, without the
+ *              blur and the depth-edge line (tone curve, grade, fog to the surround and vignette stay)
+ *   shadowPcf  'pcss' = soft shadows that widen with distance; 'grid' = a fixed 2 x 2 bilinear filter (4 taps)
+ *   anisotropy also caps the print atlas, the art sheet and the page textures (they were always x8)
+ *   mesh       'fine' | 'coarse': tessellation of the page and the page block (the page alone was 180 k triangles)
  */
 export const QUALITY = {
-  // 황지 페이퍼트레일: phones. Shadows stay (they make the pop-up read) but with fewer taps; no grain, a lighter blur.
-  lite: { maxDpr: 1, shadowMapSize: 1024, shadows: true, dof: 'cheap', dofTaps: 8, postScale: 0.5, grain: false, anisotropy: 1, msaa: 0, aoTaps: 0, bloom: false, shadowTaps: [4, 6], chroma: false, fill: false },
-  low: { maxDpr: 1, shadowMapSize: 1024, shadows: true, dof: 'cheap', dofTaps: 14, postScale: 0.5, grain: true, anisotropy: 2, msaa: 0, aoTaps: 0, bloom: false, shadowTaps: [6, 8], chroma: false, fill: false },
-  med: { maxDpr: 1.25, shadowMapSize: 2048, shadows: true, dof: 'full', dofTaps: 22, postScale: 0.5, grain: true, anisotropy: 4, msaa: 2, aoTaps: 6, bloom: true, shadowTaps: [8, 12], chroma: true, fill: true, sharpen: true },
-  high: { maxDpr: 2, shadowMapSize: 4096, shadows: true, dof: 'full', dofTaps: 36, postScale: 0.5, grain: true, anisotropy: 8, msaa: 4, aoTaps: 10, bloom: true, shadowTaps: [12, 20], chroma: true, fill: true, sharpen: true },
+  // 황지 페이퍼트레일: phones and weak tablets. Shadows stay (they make the pop-up read) but with a fixed 4-tap filter.
+  lite: { maxDpr: 1, shadowMapSize: 1024, shadows: true, dof: 'none', dofTaps: 8, postScale: 0.5, grain: false, anisotropy: 1, msaa: 0, aoTaps: 0, bloom: false, shadowTaps: [3, 4], shadowPcf: 'grid', chroma: false, fill: false, lod: 2, post: 'lite', mesh: 'coarse' },
+  low: { maxDpr: 1, shadowMapSize: 1024, shadows: true, dof: 'cheap', dofTaps: 12, postScale: 0.5, grain: true, anisotropy: 2, msaa: 0, aoTaps: 0, bloom: false, shadowTaps: [4, 6], shadowPcf: 'pcss', chroma: false, fill: false, lod: 1, post: 'full', mesh: 'coarse' },
+  med: { maxDpr: 1.25, shadowMapSize: 2048, shadows: true, dof: 'full', dofTaps: 22, postScale: 0.5, grain: true, anisotropy: 4, msaa: 2, aoTaps: 6, bloom: true, shadowTaps: [8, 12], shadowPcf: 'pcss', chroma: true, fill: true, sharpen: true, lod: 0, post: 'full', mesh: 'fine' },
+  high: { maxDpr: 2, shadowMapSize: 4096, shadows: true, dof: 'full', dofTaps: 36, postScale: 0.5, grain: true, anisotropy: 8, msaa: 4, aoTaps: 10, bloom: true, shadowTaps: [12, 20], shadowPcf: 'pcss', chroma: true, fill: true, sharpen: true, lod: 0, post: 'full', mesh: 'fine' },
 };

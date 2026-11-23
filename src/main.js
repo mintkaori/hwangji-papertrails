@@ -91,7 +91,7 @@ async function boot() {
   const { renderer, setSize: setRendererSize } = rend;
   if (!pinned) { quality = gpuTier(renderer); rend.setQuality(quality); } // integrated graphics start lower
   state.quality = quality;
-  const materials = createMaterials({ quality });
+  const materials = createMaterials({ quality, renderer });
   THREE.DefaultLoadingManager.onProgress = (url, n, total) => loading.step(0.05 + 0.6 * (n / Math.max(1, total)));
   const assets = await loadAssets({ materials, renderer, quality });
   THREE.DefaultLoadingManager.onProgress = () => {};
@@ -123,7 +123,7 @@ async function boot() {
   const npcs = createNpcs({ animals, world, traveller, camera: follow.camera, weather, seed, sfx, intro: showIntro });
   // (the 수굴 spring of 황지연못: hj_pond is pinned at cell (1, 0), 상지's spring sits south of its middle)
   const fish = createFish({ scene, world, traveller, camera: follow.camera, assets, daynight, onLeap: (id, f, x, z) => npcs.sawCreature(id, x, z), springs: [[1 * TILE_SIZE + 0.32, 0 * TILE_SIZE + 0.48]] });
-  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life, audio, sfx, get governor() { return governor; } };
+  if (params.get('debug') === '1') window.__hj = { world, wfc, traveller, follow, controls, animals, npcs, daynight, game, weather, fish, lights, life, audio, sfx, renderer, rend, post, scene, materials, get governor() { return governor; }, get loop() { return loop; } };
   // N: day / night, M: music on / off (keys only - no on-screen UI)
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -177,7 +177,7 @@ async function boot() {
   let needResize = true; let pendingRung = null; let sizeKey = '';
   function applyRung(rung, why) {
     rend.setQuality(rung.level); rend.setScale(rung.scale);
-    post.setQuality(rung.level); lights.setQuality(rung.level); materials.setQuality(rung.level);
+    post.setQuality(rung.level); lights.setQuality(rung.level); materials.setQuality(rung.level); world.setQuality(rung.level);
     state.quality = rung.level;
     console.info(`[quality] ${rung.level}${rung.scale < 1 ? ` x${rung.scale}` : ''} (${why})`);
   }

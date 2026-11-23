@@ -283,6 +283,45 @@ float hash12( vec2 p ) {
   p3 += dot( p3, p3.yzx + 33.33 );
   return fract( ( p3.x + p3.y ) * p3.z );
 }
+// lens + film: vignette, filmic tone map, grade, sage pull on the yellow-green field, shadow tint, split, grain
+vec3 lensFilm( vec3 col ) {
+  vec2 vc = ( vUv - 0.5 ) * vec2( uProj.w / 1.7778, 1.0 ) * vec2( 1.0, 1.12 );
+  float vr = dot( vc, vc ) * 2.4;
+  col *= 1.0 - uLens.x * smoothstep( 0.12, 1.25, vr ) * 1.25;
+  col = aces( col * uTone.x * uTint );
+  float l = luma( col );
+  col = mix( vec3( l ), col, uTone.z );
+  col = toSRGB( max( col, 0.0 ) );
+  col = ( col - 0.42 ) * uTone.y + 0.42;
+  // yellow-green field under the warm key reads as video-game grass: pull only those hues toward sage
+  // (cream, ochre, terracotta and the teal river are outside the mask)
+  float gm = smoothstep( 0.1, 0.3, col.g - col.b ) * smoothstep( -0.2, -0.05, col.g - col.r ) * uDofC.z;
+  col = mix( col, mix( vec3( luma( col ) ), col, 0.45 ) * vec3( 0.97, 1.0, 1.03 ), clamp( gm, 0.0, 1.0 ) );
+  col += uShadowTint * uTone.w * ( 1.0 - smoothstep( 0.0, 0.45, l ) );
+  float sx = vUv.x * 2.0 - 1.0;
+  col *= vec3( 1.0 - uFx.w * sx, 1.0 - uFx.w * 0.25 * sx, 1.0 + uFx.w * 1.3 * sx );
+  #ifdef POST_GRAIN
+    vec2 gp = gl_FragCoord.xy / uLens.z;
+    vec2 gi = floor( gp ), gf = fract( gp );
+    vec2 so = vec2( uSeed.x * 0.618, uSeed.x * 0.377 );
+    float n00 = hash12( gi + so ), n10 = hash12( gi + vec2( 1.0, 0.0 ) + so ), n01 = hash12( gi + vec2( 0.0, 1.0 ) + so ), n11 = hash12( gi + vec2( 1.0, 1.0 ) + so );
+    float n = mix( mix( n00, n10, gf.x ), mix( n01, n11, gf.x ), gf.y ) + hash12( gl_FragCoord.xy + so * 1.7 ) * 0.5 - 0.75;
+    float gl2 = luma( col );
+    col += n * uLens.y * 2.2 * ( 0.35 + 1.3 * sqrt( clamp( gl2, 0.0, 1.0 ) ) * ( 1.0 - 0.6 * gl2 ) );
+  #endif
+  return col;
+}
+#ifdef POST_LITE
+// 황지 (weak GPUs, quality post 'lite'): the whole post chain is this one pass - the world falloff / fog to the surround
+// (one depth read) and the lens + film grade; no depth of field, no depth-edge line, no AO / bloom passes before it.
+void main() {
+  float rawD = textureLod( tDepth, vUv, 0.0 ).r;
+  vec3 col = gradeWorld( textureLod( tScene, vUv, 0.0 ).rgb, vUv, viewZ( rawD ), rawD );
+  col = lensFilm( col );
+  if ( uSeed.z > 3.5 ) col = toSRGB( aces( textureLod( tScene, vUv, 0.0 ).rgb ) );
+  gl_FragColor = vec4( clamp( col, 0.0, 1.0 ), 1.0 );
+}
+#else
 void main() {
   float rawD = textureLod( tDepth, vUv, 0.0 ).r;
   float z = viewZ( rawD );
@@ -362,30 +401,7 @@ void main() {
   #endif
 
   // --- lens + film ------------------------------------------------------------------------------------
-  vec2 vc = ( vUv - 0.5 ) * vec2( uProj.w / 1.7778, 1.0 ) * vec2( 1.0, 1.12 );
-  float vr = dot( vc, vc ) * 2.4;
-  col *= 1.0 - uLens.x * smoothstep( 0.12, 1.25, vr ) * 1.25;
-  col = aces( col * uTone.x * uTint );
-  float l = luma( col );
-  col = mix( vec3( l ), col, uTone.z );
-  col = toSRGB( max( col, 0.0 ) );
-  col = ( col - 0.42 ) * uTone.y + 0.42;
-  // yellow-green field under the warm key reads as video-game grass: pull only those hues toward sage
-  // (cream, ochre, terracotta and the teal river are outside the mask)
-  float gm = smoothstep( 0.1, 0.3, col.g - col.b ) * smoothstep( -0.2, -0.05, col.g - col.r ) * uDofC.z;
-  col = mix( col, mix( vec3( luma( col ) ), col, 0.45 ) * vec3( 0.97, 1.0, 1.03 ), clamp( gm, 0.0, 1.0 ) );
-  col += uShadowTint * uTone.w * ( 1.0 - smoothstep( 0.0, 0.45, l ) );
-  float sx = vUv.x * 2.0 - 1.0;
-  col *= vec3( 1.0 - uFx.w * sx, 1.0 - uFx.w * 0.25 * sx, 1.0 + uFx.w * 1.3 * sx );
-  #ifdef POST_GRAIN
-    vec2 gp = gl_FragCoord.xy / uLens.z;
-    vec2 gi = floor( gp ), gf = fract( gp );
-    vec2 so = vec2( uSeed.x * 0.618, uSeed.x * 0.377 );
-    float n00 = hash12( gi + so ), n10 = hash12( gi + vec2( 1.0, 0.0 ) + so ), n01 = hash12( gi + vec2( 0.0, 1.0 ) + so ), n11 = hash12( gi + vec2( 1.0, 1.0 ) + so );
-    float n = mix( mix( n00, n10, gf.x ), mix( n01, n11, gf.x ), gf.y ) + hash12( gl_FragCoord.xy + so * 1.7 ) * 0.5 - 0.75;
-    float gl2 = luma( col );
-    col += n * uLens.y * 2.2 * ( 0.35 + 1.3 * sqrt( clamp( gl2, 0.0, 1.0 ) ) * ( 1.0 - 0.6 * gl2 ) );
-  #endif
+  col = lensFilm( col );
   if ( uSeed.z > 0.5 ) {
     if ( uSeed.z < 1.5 ) col = vec3( max( coc, 0.0 ), max( - coc, 0.0 ), blur.a * uDofB.z ) / uDofB.z;
     else if ( uSeed.z < 2.5 ) col = vec3( texture2D( tAo, vUv ).r );
@@ -394,6 +410,7 @@ void main() {
   }
   gl_FragColor = vec4( clamp( col, 0.0, 1.0 ), 1.0 );
 }
+#endif
 `;
 
 // ---- JS mirror of the tone curve (to pre-compensate colours that must come out exact on screen) -------
@@ -488,6 +505,7 @@ export function createPost({ renderer, scene, camera, quality = 'high' }) {
     M.bloomDown = mat(BLOOM_DOWN_FRAG, { tPre: { value: null }, uHalfTexel: { value: new THREE.Vector2() }, uThreshold: { value: 1 } });
     M.bloomBlur = mat(BLOOM_BLUR_FRAG, { tSrc: { value: null }, uDir: { value: new THREE.Vector2() } });
     const defs = {};
+    if (q.post === 'lite') defs.POST_LITE = 1;
     if (q.chroma) defs.POST_CHROMA = 1;
     if (q.aoTaps > 0) defs.POST_AO = 1;
     if (q.bloom) defs.POST_BLOOM = 1;
@@ -517,8 +535,10 @@ export function createPost({ renderer, scene, camera, quality = 'high' }) {
     for (const k in T) { if (T[k].depthTexture) T[k].depthTexture.dispose(); T[k].dispose(); }
     const w = width;
     const h = height;
-    const hw = Math.max(1, Math.round(w * (q.postScale || 0.5)));
-    const hh = Math.max(1, Math.round(h * (q.postScale || 0.5)));
+    // 황지: post 'lite' runs the composite alone - the half-res blur / AO / bloom targets shrink to a texel
+    const lite = q.post === 'lite';
+    const hw = lite ? 8 : Math.max(1, Math.round(w * (q.postScale || 0.5)));
+    const hh = lite ? 8 : Math.max(1, Math.round(h * (q.postScale || 0.5)));
     T.scene = target(w, h, { depth: true, samples: canFloat ? q.msaa || 0 : 0 });
     const depth = new THREE.DepthTexture(w, h, THREE.UnsignedIntType);
     depth.format = THREE.DepthFormat;
@@ -639,12 +659,13 @@ export function createPost({ renderer, scene, camera, quality = 'high' }) {
       renderer.render(scene, camera);
 
       const depth = T.scene.depthTexture;
-      const aoOn = full && q.aoTaps > 0 && CONFIG.post.ao > 0;
+      const lite = q.post === 'lite'; // 황지 (weak GPUs): the composite alone (no AO / blur / bloom passes)
+      const aoOn = full && !lite && q.aoTaps > 0 && CONFIG.post.ao > 0;
       if (aoOn) {
         M.ao.uniforms.tDepth.value = depth;
         pass(M.ao, T.ao);
       }
-      if (full) {
+      if (full && !lite) {
         const pu = M.pre.uniforms;
         pu.tScene.value = T.scene.texture; pu.tDepth.value = depth; pu.tAo.value = T.ao.texture; pu.uAoOn.value = aoOn ? 1 : 0;
         pass(M.pre, T.pre);

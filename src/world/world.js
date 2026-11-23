@@ -1304,6 +1304,8 @@ export function createWorld({ scene, assets, wfc, materials, quality }) {
     group,
     book,
     wfc,
+    /** 황지: a new quality level (render/governor.js via main.js): the page mesh and its texture filtering follow it. */
+    setQuality(level) { book.setQuality(level); },
     /** game-hook(lanterns): the live tile record of a cell (meshes + batch instances), or null. Read only. */
     tileRecord: lookup,
     /** Stream tiles around the traveller and advance every fold spring. */

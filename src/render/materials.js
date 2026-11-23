@@ -15,6 +15,7 @@ import { setColorCached } from './colorcache.js';
 import * as THREE from 'three';
 import { CONFIG, qualitySettings } from '../core/config.js';
 import { mulberry32 } from '../core/rng.js';
+import { setAnisotropy } from './aniso.js';
 
 /** Uniforms shared by EVERY paper material. lights.js and post.js write into these each frame. */
 export const paperUniforms = {
@@ -289,6 +290,9 @@ const VERT_MAIN = /* glsl */ `
 `;
 
 const FRAG_PARS = /* glsl */ `
+#ifndef PAPER_LOD
+#define PAPER_LOD 0
+#endif
 uniform sampler2D uPaperFibreTex;
 uniform vec4 uPaperFibre;
 uniform vec4 uPaperFibre2;
@@ -390,6 +394,9 @@ function patchShadowChunk(q) {
 		#ifndef PAPER_PCF_TAPS
 			#define PAPER_PCF_TAPS ${taps[1]}
 		#endif
+		#ifndef PAPER_SHADOW_GRID
+			#define PAPER_SHADOW_GRID ${q.shadowPcf === 'grid' ? 1 : 0}
+		#endif
 
 		float paperIGN( vec2 p ) { return fract( 52.9829189 * fract( dot( p, vec2( 0.06711056, 0.00583715 ) ) ) ); }
 		vec2 paperVogel( float i, float n, float phi ) {
@@ -398,6 +405,40 @@ function patchShadowChunk(q) {
 			return vec2( cos( t ), sin( t ) ) * r;
 		}
 
+		#if PAPER_SHADOW_GRID
+		// 황지 (weak GPUs): no blocker search, no noise - a 2 x 2 bilinear filter on a grid of ${f(S.gridTexels ?? 1.6)} shadow texels
+		// (4 taps; smooth, a little soft, the same width everywhere). Same outputs and receiver-plane bias as the PCSS below.
+		vec2 paperPCSS( sampler2D shadowMap, vec2 shadowMapSize, float worldPerUv, float lightSize, vec4 shadowCoord ) {
+			vec3 sc = shadowCoord.xyz / shadowCoord.w;
+			vec3 dx = dFdx( sc );
+			vec3 dy = dFdy( sc );
+			if ( sc.x <= 0.0 || sc.x >= 1.0 || sc.y <= 0.0 || sc.y >= 1.0 || sc.z >= 1.0 ) return vec2( 1.0 );
+			const float range = ${f(range)};
+			float det = dx.x * dy.y - dx.y * dy.x;
+			vec2 grad = vec2( 0.0 );
+			if ( abs( det ) > 1e-14 ) grad = vec2( dy.y * dx.z - dx.y * dy.z, dx.x * dy.z - dy.x * dx.z ) / det;
+			float slope = length( grad ) * range / worldPerUv;
+			grad *= min( 1.0, 4.0 / max( slope, 1e-4 ) );
+			float bias = ${f(S.bias)} / range;
+			float thick = ${f(S.sheetThickness)} / range;
+			float st = ${f(S.gridTexels ?? 1.6)} / shadowMapSize.x;
+			vec2 g = sc.xy / st - 0.5;
+			vec2 fr = fract( g );
+			vec2 o00 = ( floor( g ) + 0.5 ) * st - sc.xy;
+			vec2 o10 = o00 + vec2( st, 0.0 );
+			vec2 o01 = o00 + vec2( 0.0, st );
+			vec2 o11 = o00 + vec2( st );
+			float d00 = sc.z + dot( grad, o00 ) - textureLod( shadowMap, sc.xy + o00, 0.0 ).r;
+			float d10 = sc.z + dot( grad, o10 ) - textureLod( shadowMap, sc.xy + o10, 0.0 ).r;
+			float d01 = sc.z + dot( grad, o01 ) - textureLod( shadowMap, sc.xy + o01, 0.0 ).r;
+			float d11 = sc.z + dot( grad, o11 ) - textureLod( shadowMap, sc.xy + o11, 0.0 ).r;
+			vec2 l00 = vec2( step( d00, bias ), step( d00, thick ) );
+			vec2 l10 = vec2( step( d10, bias ), step( d10, thick ) );
+			vec2 l01 = vec2( step( d01, bias ), step( d01, thick ) );
+			vec2 l11 = vec2( step( d11, bias ), step( d11, thick ) );
+			return mix( mix( l00, l10, fr.x ), mix( l01, l11, fr.x ), fr.y );
+		}
+		#else
 		// PCSS on the raw depth map: blocker search, receiver-plane depth bias, Vogel-disc PCF.
 		// Returns ( lit fraction, lit fraction when blockers within one sheet thickness are ignored ).
 		vec2 paperPCSS( sampler2D shadowMap, vec2 shadowMapSize, float worldPerUv, float lightSize, vec4 shadowCoord ) {
@@ -448,6 +489,7 @@ function patchShadowChunk(q) {
 			}
 			return vec2( lit, litT ) / float( PAPER_PCF_TAPS );
 		}
+		#endif
 
 		float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
 			float lit = paperPCSS( shadowMap, shadowMapSize, shadowRadius, shadowBias, shadowCoord ).x;
@@ -469,7 +511,10 @@ function patchShadowChunk(q) {
 }
 
 const FRAG_FIBRE = /* glsl */ `
-#ifndef PAPER_NO_CUTOUT
+// (황지: the cards are cut out on every quality level - a tall card south of the traveller would hide her. The page and
+// its block (PAPER_GROUND) only from 'med' up, where a hill can stand in the way: without the discard below, the GPU
+// keeps its early depth test for the page, the biggest draw - measured about 4 % of the whole frame on 'lite' / 'low'.)
+#if !defined( PAPER_NO_CUTOUT ) && !( defined( PAPER_GROUND ) && PAPER_LOD > 0 )
 if ( uPaperHero2.y > 0.0 && vPaperW.y > uPaperHero2.x + 0.07 ) {
   // hero cut-out: screen-door (no blending, depth stays correct for DOF / AO; the shadow pass is untouched)
   vec3 hD = uPaperHero.xyz - cameraPosition;
@@ -485,6 +530,7 @@ if ( uPaperHero2.y > 0.0 && vPaperW.y > uPaperHero2.x + 0.07 ) {
   }
 }
 #endif
+#ifndef PAPER_NO_ART
 {
   // printed art BEFORE fibre and lighting: albedo = mix( vertexColour, vertexColour * art, coverage ). Art faces are
   // authored white (times baked contact AO), so the art shows unmodified but keeps the AO, fibre, shadows, glow.
@@ -500,6 +546,7 @@ if ( uPaperHero2.y > 0.0 && vPaperW.y > uPaperHero2.x + 0.07 ) {
   if ( paperIsArt > 0.5 ) {
     gPaperCov = clamp( ( paperArt.a - uPaperArt.w ) / paperAw + 0.5, 0.0, 1.0 );
     if ( gPaperCov < uPaperRim2.x ) discard;
+    #if PAPER_LOD < 1
     if ( uPaperRim.w > 0.0 ) {
       // pale cut-edge rim: the blurred alpha is probed on a ring of screen radius = rim width (even on screen at any
       // tilt; constant world width between the px clamps); a slow wobble keeps it hand-cut
@@ -519,21 +566,31 @@ if ( uPaperHero2.y > 0.0 && vPaperW.y > uPaperHero2.x + 0.07 ) {
       }
       paperRimK = ( 1.0 - smoothstep( 0.3, 0.7, amin ) ) * uPaperRim.w;
     }
+    #endif
   }
   diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * paperArt.rgb, paperArtK );
   // the rim keeps the baked contact AO of the vertex colour (vColor) but not the print
   diffuseColor.rgb = mix( diffuseColor.rgb, uPaperRimCol.rgb * min( vec3( 1.0 ), vColor.rgb * 1.15 ), paperRimK );
 }
+#endif
 vec3 paperAN = abs( vPaperNrm );
 vec2 paperUv = ( paperAN.y >= max( paperAN.x, paperAN.z ) ) ? vPaperPos.xz : ( ( paperAN.x > paperAN.z ) ? vPaperPos.zy : vPaperPos.xy );
 paperUv *= uPaperFibre.x;
 vec4 paperF1 = texture2D( uPaperFibreTex, paperUv, -0.6 );
+#if PAPER_LOD < 1
 vec4 paperF2 = texture2D( uPaperFibreTex, paperUv * uPaperFibre2.y + vec2( 0.37, 0.61 ), -0.4 );
+#else
+const vec4 paperF2 = vec4( 0.5 ); // 황지 (lighter levels): the fine octave is far below a pixel at play distance
+#endif
 float paperTooth = ( paperF1.b - 0.5 ) + ( paperF2.b - 0.5 ) * uPaperFibre2.x;
 float paperCloud = paperF1.a - 0.5;
 #ifndef PAPER_NO_FIBRE
 // crumple: the same sheet sampled coarse and blurred = broad low-relief creases (lighting only, see FRAG_NORMAL)
+#if PAPER_LOD < 2
 vec4 paperF3 = texture2D( uPaperFibreTex, paperUv.yx * uPaperFibre2.w + vec2( 0.13, 0.71 ), 1.6 );
+#else
+const vec4 paperF3 = vec4( 0.5 );
+#endif
 // gold pass: + a broad soft mottle (the coarse sample) so large sheets never read as a flat fill at gameplay distance
 diffuseColor.rgb *= max( 0.0, 1.0 + paperTooth * uPaperFibre.y * 6.25 + ( paperCloud + ( paperF3.a - 0.5 ) * uPaperLightB.x ) * uPaperFibre.z * 6.25 );
 #endif
@@ -556,7 +613,7 @@ if ( uPaperPoolCol.w > 0.0 ) {
 `;
 
 const FRAG_NORMAL = /* glsl */ `
-#ifndef PAPER_NO_FIBRE
+#if !defined( PAPER_NO_FIBRE ) && PAPER_LOD < 2
 {
 	vec2 pn = ( paperF1.rg - 0.5 ) * 2.0 + ( paperF2.rg - 0.5 ) * 2.0 * uPaperFibre2.x;
 	pn += ( paperF3.gr - 0.5 ) * 2.0 * uPaperFibre2.z / max( uPaperFibre.w, 1e-3 );
@@ -608,7 +665,7 @@ function extend(material, flags) {
   material.customProgramCacheKey = () => 'paper3|' + JSON.stringify(flags);
 }
 
-export function createMaterials({ quality = 'high' } = {}) {
+export function createMaterials({ quality = 'high', renderer = null } = {}) {
   const cache = new Map();
   let q = qualitySettings(quality);
   let textures = {};
@@ -690,8 +747,11 @@ export function createMaterials({ quality = 'high' } = {}) {
 
   function defines() {
     const taps = q.shadowTaps || [8, 12];
-    return { PAPER_BLOCKER_TAPS: taps[0], PAPER_PCF_TAPS: taps[1] };
+    // 황지: PAPER_LOD = shader detail (QUALITY.lod: 0 full .. 2 light), PAPER_SHADOW_GRID = fixed 4-tap shadow filter
+    return { PAPER_BLOCKER_TAPS: taps[0], PAPER_PCF_TAPS: taps[1], PAPER_LOD: q.lod | 0, PAPER_SHADOW_GRID: q.shadowPcf === 'grid' ? 1 : 0 };
   }
+  // the printed art: x8 on the desktop levels (cards seen at a slant), the level's own value on the light ones
+  const artAniso = () => ((q.anisotropy || 4) >= 4 ? Math.max(q.anisotropy || 4, 8) : Math.max(1, q.anisotropy || 1));
 
   const api = {
     palette: CONFIG.palette,
@@ -749,7 +809,7 @@ export function createMaterials({ quality = 'high' } = {}) {
         art.generateMipmaps = true;
         art.minFilter = THREE.LinearMipmapLinearFilter;
         art.magFilter = THREE.LinearFilter;
-        art.anisotropy = Math.max(q.anisotropy || 4, 8);
+        art.anisotropy = artAniso();
         art.needsUpdate = true;
       }
       paperUniforms.uPaperArtTex.value = art && art.isTexture ? art : null;
@@ -771,12 +831,13 @@ export function createMaterials({ quality = 'high' } = {}) {
       for (const m of cache.values()) {
         const want = a2c() && !m.transparent;
         if (m.alphaToCoverage !== want) { m.alphaToCoverage = want; m.needsUpdate = true; }
-        if (m.defines.PAPER_BLOCKER_TAPS !== d.PAPER_BLOCKER_TAPS || m.defines.PAPER_PCF_TAPS !== d.PAPER_PCF_TAPS) {
-          Object.assign(m.defines, d);
-          m.needsUpdate = true;
-        }
+        let changed = false;
+        for (const k in d) if (m.defines[k] !== d[k]) { m.defines[k] = d[k]; changed = true; }
+        if (changed) m.needsUpdate = true;
       }
-      if (fibreTex) { fibreTex.anisotropy = q.anisotropy || 4; fibreTex.needsUpdate = true; }
+      // in place on the live textures (the fibre used to be re-uploaded with its mipmaps on every level change)
+      setAnisotropy(renderer, fibreTex, q.anisotropy || 4);
+      if (paperUniforms.uPaperArtTex.value) setAnisotropy(renderer, paperUniforms.uPaperArtTex.value, artAniso());
     },
     dispose() {
       for (const m of cache.values()) m.dispose();

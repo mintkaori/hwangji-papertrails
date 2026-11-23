@@ -15,7 +15,8 @@
 //    the per-biome transform of CONFIG.world.biomeTint, blended across biome borders (heartland = identity).
 //  * Un-risen cells are a faded offset print; a cell "inks in" shortly before its tile rises.
 import * as THREE from 'three';
-import { CONFIG, TILE_SIZE } from '../core/config.js';
+import { CONFIG, TILE_SIZE, qualitySettings } from '../core/config.js';
+import { setAnisotropy } from '../render/aniso.js';
 import { MODELS, MODEL_IDS, FALLBACK_MODEL } from '../core/models.js';
 import { createFoldInstance } from './fold.js';
 import { isThinned } from './cards.js';
@@ -433,6 +434,13 @@ export function createBook({ scene, assets, wfc, materials, quality, terrain = n
   atlas.texture.wrapS = atlas.texture.wrapT = THREE.ClampToEdgeWrapping;
   atlas.texture.anisotropy = 8;
   let baked = false;
+  // 황지 (weak GPUs): the print atlas and the page textures were always sampled at x8 anisotropy; they now follow the
+  // quality level (QUALITY.anisotropy: x1 lite .. x8 high)
+  let anisoLevel = quality;
+  function applyAniso() {
+    const n = qualitySettings(anisoLevel).anisotropy || 1;
+    for (const t of [atlas.texture, fibreTex, fibreNormalTex, sheetTex, tableTex]) if (t) setAnisotropy(gl3, t, n);
+  }
 
   function bake(renderer) {
     baked = true;
@@ -595,7 +603,13 @@ export function createBook({ scene, assets, wfc, materials, quality, terrain = n
     m.needsUpdate = true;
   }
   const pageMat = paperLike({ color: '#ffffff', side: THREE.FrontSide, map: uniqueMap(), fibre: 'none', vary: false });
+  // 황지: the page carries no printed art (it has no art UVs): leave the art read and its cut-edge maths out of its shader.
+  // PAPER_GROUND: no hero cut-out below 'med' (materials.js FRAG_FIBRE) - the page shader then has no discard at all.
+  if (pageMat.defines) { pageMat.defines.PAPER_NO_ART = 1; pageMat.defines.PAPER_GROUND = 1; }
   chain(pageMat, (shader) => {
+    // 황지 (weak GPUs): the shader detail follows the quality level (materials.js keeps PAPER_LOD on every paper material;
+    // it is part of the program key, so each level compiles its own page shader once)
+    const lod = (pageMat.defines && pageMat.defines.PAPER_LOD) | 0;
     bind(shader, ['uAtlas', 'uCells', 'uFibre', 'uFibreN', 'uOff', 'uAnchorMod', 'uBk', 'uGut', 'uGut2', 'uCrease', 'uFib', 'uFib2', 'uFibMean', 'uCream', 'uBiomeG', 'uBiomeGK', 'uBiomeP', 'uBiomePK', 'uBiomePath', 'uBiomePathE', 'uBiomeF', 'uWorld0', 'uTrav', 'uWat', 'uWat2', 'uGnd', 'uWatPal', 'uReflTex', 'uReflMat', 'uRefl', 'uRefl2']);
     const hasPools = shader.fragmentShader.includes('uPaperPoolCol') && shader.fragmentShader.includes('varying vec3 vPaperW');
     shader.vertexShader = shader.vertexShader
@@ -656,7 +670,7 @@ vec3 pageColor() {
   vec4 base4 = textureGrad(uAtlas, vec3(uv, layer), dx, dy);
   float twinLayer = (gb & 192) == 192 ? ${(modelIds.length * 2 + VAR_N + 2).toFixed(1)} + layer * 0.5 : (gb & 64) != 0 ? ${(modelIds.length * 2).toFixed(1)} + layer * 0.5 : (gb & 128) != 0 ? ${(modelIds.length * 2).toFixed(1)} + ${VAR_N.toFixed(1)} + (layer == ${((modelIndex.get('meadow') ?? 0) * 2).toFixed(1)} ? 0.0 : 1.0) : layer + 1.0;
   vec3 flat_ = textureGrad(uAtlas, vec3(uv, twinLayer), dx, dy).rgb;
-  ${groundBodyGLSL(bakeSize)}
+  ${groundBodyGLSL(bakeSize, lod)}
   // neighbour cells of this quadrant (ink halo + biome blend)
   vec2 hq = sign(f - 0.5);
   vec2 hd = 0.5 - abs(f - 0.5);
@@ -692,6 +706,9 @@ vec3 pageColor() {
     if (pt.w > 0.002 && ((gb >> 5) & 1) == 1) {
       vec4 pe = w0 * uBiomePathE[b0] + w1 * uBiomePathE[b1] + w2 * uBiomePathE[b2] + w3 * uBiomePathE[b3];
       float pm0 = gPathM;   // round 3: the ground print's own road mask (the road is repainted there, so a colour test no longer finds it)
+      float pgain = 1.0 + 5.0 * clamp(pt.w - 0.9, 0.0, 1.0);
+      ${lod >= 2 ? /* glsl */ `// 황지 (lod 2): the soft road mask itself, tightened, instead of the eroded neighbourhood (4 reads fewer)
+      float pm = smoothstep(0.35, 0.9, min(1.0, pm0 * pgain));` : /* glsl */ `
       // fixer pass: the tinted track is narrower than the printed road and its edge wanders (trodden paper, not a
       // road): the mask is eroded by a radius that follows a slow world-space wobble
       float wob = 0.5 + 0.25 * sin(p.x * 2.3 + 1.7 * sin(p.y * 1.1)) + 0.25 * sin(p.y * 2.9 + 1.3 * sin(p.x * 1.7) + 2.0);
@@ -704,8 +721,7 @@ vec3 pageColor() {
       float pm = pm0 * smoothstep(0.45, 0.85, 0.25 * (m1 + m2 + m3 + m4) / max(pm0, 0.08));
       // amount > 0.9 = mask gain for a faint / stippled road print (snow): the neighbourhood mean is boosted instead
       // (before this the snow track was painted by the EDGE colour alone, as a hard dark slab)
-      float pgain = 1.0 + 5.0 * clamp(pt.w - 0.9, 0.0, 1.0);
-      pm = mix(pm, smoothstep(0.3, 0.8, 0.2 * (pm0 + m1 + m2 + m3 + m4) * pgain), clamp(pgain - 1.0, 0.0, 1.0));
+      pm = mix(pm, smoothstep(0.3, 0.8, 0.2 * (pm0 + m1 + m2 + m3 + m4) * pgain), clamp(pgain - 1.0, 0.0, 1.0));`}
       // soft shoulder between the track and the page (was a hard printed line)
       float ed = clamp(pm0 - pm, 0.0, 1.0) * 0.8;
       float lumB = dot(base, vec3(0.3, 0.59, 0.11));
@@ -716,7 +732,7 @@ vec3 pageColor() {
     flat_ = mix(ground, foliageShift(biomeTint(flat_, p0, p1, p2, pk), fw), isProp);
     base = ground;
   }
-  ${waterBodyGLSL(waterKinds)}
+  ${waterBodyGLSL(waterKinds, lod)}
   float tw = max(d.b, uCrease.w);
   vec3 pr = mix(base, flat_, tw);
   float lum = dot(pr, vec3(0.3, 0.59, 0.11));
@@ -726,7 +742,7 @@ vec3 pageColor() {
   // and a little hatching in the dark areas. Outlines = luma gradient of the print itself (no extra fetch).
   float lgr = length(vec2(dFdx(lum), dFdy(lum))) / max(wpx, 1e-5);
   float skLine = smoothstep(0.5, 2.6, lgr);
-  float skHatch = smoothstep(0.35, 0.9, sin((wq.x - wq.y) * WKF(5120) + 2.0 * wNoise(wq, 2.0))) * (1.0 - smoothstep(0.3, 0.52, lum)) * (1.0 - smoothstep(0.012, 0.03, wpx));
+  float skHatch = ${lod >= 2 ? '0.0' : 'smoothstep(0.35, 0.9, sin((wq.x - wq.y) * WKF(5120) + 2.0 * wNoise(wq, 2.0))) * (1.0 - smoothstep(0.3, 0.52, lum)) * (1.0 - smoothstep(0.012, 0.03, wpx))'};
   vec3 skWash = mix(uCream, mix(pr, vec3(lum) * vec3(1.04, 1.0, 0.93), 0.5 + 0.25 * fpk), uBk.w * (0.72 - 0.2 * fpk));
   vec3 faded = mix(skWash, vec3(0.34, 0.29, 0.25), clamp(0.5 * skLine + 0.2 * skHatch, 0.0, 0.6) * uBk.w);
   // ink: full on cells about to rise / risen, with a soft halo into the neighbours (no hard tile steps)
@@ -734,7 +750,7 @@ vec3 pageColor() {
   float inkv = max(max(d.a, i1 * (1.0 - smoothstep(0.0, 0.5, hd.x))), max(i2 * (1.0 - smoothstep(0.0, 0.5, hd.y)), i3 * (1.0 - smoothstep(0.0, 0.5, length(hd)))));
   // soft radial fade around the traveller (noise-warped rim, no tile-shaped steps); the per-cell ink stays as the
   // floor under tiles that stand outside it
-  float rdT = distance(p, uTrav.xy) + 2.4 * (wNoise(wq + 14.2, 0.5) - 0.5) + 0.8 * (wNoise(wq + 3.7, 2.0) - 0.5);
+  float rdT = distance(p, uTrav.xy) + 2.4 * (wNoise(wq + 14.2, 0.5) - 0.5)${lod >= 2 ? '' : ' + 0.8 * (wNoise(wq + 3.7, 2.0) - 0.5)'};
   float inkC = inkv;
   inkv = max(inkv, 1.0 - smoothstep(uTrav.z, uTrav.w, rdT));
   // the land takes the radial colour; the flat print of a piece stays a pencil plan until its own cell inks in
@@ -775,7 +791,7 @@ vec3 pageColor() {
   // fibre: fine tooth + coarse clouding (albedo) and a tooth normal
   vec2 fuv = (p + uOff.zw) * uFib.x;
   float fa = texture2D(uFibre, fuv).g / uFibMean - 1.0;
-  float fc = texture2D(uFibre, (p.yx + uOff.wz) * vec2(uFib2, -uFib2) + vec2(0.31, 0.67)).g / uFibMean - 1.0;
+  ${lod >= 2 ? /* glsl */ `col *= 1.0 + fa * 0.95 * uFib.z;   // 황지 (lod 2): one fibre read, no tooth relief` : /* glsl */ `float fc = texture2D(uFibre, (p.yx + uOff.wz) * vec2(uFib2, -uFib2) + vec2(0.31, 0.67)).g / uFibMean - 1.0;
   col *= 1.0 + (fa * 0.75 + fc * 0.6) * uFib.z;
   if (uFib.w > 0.5) {
     vec3 n = texture2D(uFibreN, fuv).xyz * 2.0 - 1.0;
@@ -785,28 +801,42 @@ vec3 pageColor() {
     float hx = texture2D(uFibre, fuv + vec2(e1, 0.0)).g - texture2D(uFibre, fuv - vec2(e1, 0.0)).g;
     float hy = texture2D(uFibre, fuv + vec2(0.0, e1)).g - texture2D(uFibre, fuv - vec2(0.0, e1)).g;
     tilt -= vec2(hx, hy) * 2.2 * uFib.y;
-  }
+  }`}
   gPageTilt = tilt;
   return col;
 }`)
-      .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = pageColor();' + TERRAIN_PAGE_FRAGMENT + (wet ? '\ndiffuseColor.rgb = wetPaper(diffuseColor.rgb, wetAt(vTerrW, 1.0));' : '') + (hasPools ? WATER_GLOW_GLSL : '') + WATER_MIRROR_GLSL)
+      .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = pageColor();' + TERRAIN_PAGE_FRAGMENT + (wet ? '\ndiffuseColor.rgb = wetPaper(diffuseColor.rgb, wetAt(vTerrW, 1.0));' : '') + (hasPools ? WATER_GLOW_GLSL : '') + (lod >= 1 ? '' : WATER_MIRROR_GLSL)) // (the mirror pass runs from 'med' up: render/water.js minQuality)
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize(normal + mat3(viewMatrix) * vec3(gPageTilt.x - vTerr.y, 0.0, gPageTilt.y - vTerr.z));');
     if (wet) wet.patch(shader);
     if (!shader.fragmentShader.includes('diffuseColor.rgb = pageColor();')) console.warn('[book] page shader hook not applied (unexpected material)');
   }, 'book-page-v19-wet');
 
-  const pageGeo = new THREE.PlaneGeometry(HW * 2, HD * 2, Math.round(HW * 2 / 0.1), terrain && terrain.enabled ? Math.round(HD * 2 / 0.3) : 8).rotateX(-Math.PI / 2); // 황지: rows for the hills
+  // 황지 (weak GPUs): QUALITY.mesh 'coarse' = a column every 0.25 (was 0.1) and a row every 0.5 (was 0.3): 43 k triangles
+  // instead of 180 k. The gutter valley (1.4 wide) still gets 6 columns, the hills (3.6 units and up) stay round.
+  const meshOf = (level) => (qualitySettings(level).mesh === 'coarse' ? 'coarse' : 'fine');
+  let meshMode = meshOf(quality);
+  const makePageGeo = (mode) => {
+    const cx = mode === 'coarse' ? 0.25 : 0.1; const cz = mode === 'coarse' ? 0.5 : 0.3;
+    return new THREE.PlaneGeometry(HW * 2, HD * 2, Math.round(HW * 2 / cx), terrain && terrain.enabled ? Math.round(HD * 2 / cz) : 8).rotateX(-Math.PI / 2); // 황지: rows for the hills
+  };
+  let pageGeo = makePageGeo(meshMode);
   const page = new THREE.Mesh(pageGeo, pageMat);
   page.name = 'page';
   page.position.y = -0.002;
   page.receiveShadow = true;
   page.frustumCulled = false;
-  page.onBeforeRender = (renderer) => { if (!baked) bake(renderer); U.uWat.value.x = state.time || 0; };
+  // (황지: the page keeps its default place among the opaque objects, which three orders by material. Measured on every
+  // quality level, drawing it after everything else (renderOrder 1) made the frame 4-17 % slower, and drawing it before
+  // everything else (-1) 17-25 % slower.)
+  let gl3 = null; // the renderer, once the page has been drawn (quality changes set texture filtering through it)
+  page.onBeforeRender = (renderer) => { if (!baked) { gl3 = renderer; bake(renderer); applyAniso(); } U.uWat.value.x = state.time || 0; };
   group.add(page);
 
   // ---- page block (stacked sheet edges) -----------------------------------------------------------
   // Profile from the page edge outward/downward: N signatures, each a riser (sheet lines) + a small tread.
-  const rnd = lcg(9001);
+  const rnd0 = lcg(9001);
+  let profDraws = 0;
+  const rnd = () => { profDraws++; return rnd0(); };
   const N = Math.max(3, B.pageStackLayers | 0);
   const prof = [{ ox: 0, oz: 0, y: 0, v: 0, tread: false }];
   {
@@ -826,10 +856,11 @@ vec3 pageColor() {
   const footX = prof[prof.length - 1].ox;
   const footZ = prof[prof.length - 1].oz;
   // ring of base points around the page rectangle (clockwise seen from above), with outward flags
-  const ring = [];
-  {
-    const nxSeg = Math.round(HW * 2 / 0.125);
-    const nzSeg = Math.round(HD * 2 / 0.5);
+  // (황지: 'coarse' meshes space them 4 x wider - 9 k triangles instead of 31 k, in the main and the shadow pass)
+  const makeRing = (mode) => {
+    const ring = [];
+    const nxSeg = Math.round(HW * 2 / (mode === 'coarse' ? 0.5 : 0.125));
+    const nzSeg = Math.round(HD * 2 / (mode === 'coarse' ? 1.0 : 0.5));
     for (let i = 0; i < nxSeg; i++) ring.push({ x: -HW + (i / nxSeg) * HW * 2, z: -HD, sx: i === 0 ? -1 : 0, sz: -1 }); // north edge, west->east
     for (let i = 0; i < nzSeg; i++) ring.push({ x: HW, z: -HD + (i / nzSeg) * HD * 2, sx: 1, sz: i === 0 ? -1 : 0 }); // east
     for (let i = 0; i < nxSeg; i++) ring.push({ x: HW - (i / nxSeg) * HW * 2, z: HD, sx: i === 0 ? 1 : 0, sz: 1 }); // south
@@ -841,8 +872,13 @@ vec3 pageColor() {
       s += Math.hypot(b.x - ring[i].x, b.z - ring[i].z);
     }
     ring.total = s;
-  }
-  const blockGeo = (() => {
+    return ring;
+  };
+  const makeBlockGeo = (mode) => {
+    const ring = makeRing(mode);
+    // the same random stream as before the split (it continues where the profile above stopped)
+    const rnd = lcg(9001);
+    for (let k = 0; k < profDraws; k++) rnd();
     const pos = []; const col = []; const uv = [];
     const M = prof.length;
     const R = ring.length;
@@ -878,8 +914,10 @@ vec3 pageColor() {
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.computeVertexNormals();
     return g;
-  })();
+  };
+  let blockGeo = makeBlockGeo(meshMode);
   const blockMat = paperLike({ color: palette.cutEdge || '#fbf6ea', side: THREE.DoubleSide, map: uniqueMap(), fibre: 'local', vary: false, vertexColors: true });
+  if (blockMat.defines) { blockMat.defines.PAPER_NO_ART = 1; blockMat.defines.PAPER_GROUND = 1; } // no art UVs on the sheet edges either
   const uSheet = { value: sheetTex };
   chain(blockMat, (shader) => {
     bind(shader, ['uGut', 'uGut2', 'uBk']);
@@ -1069,6 +1107,18 @@ vec3 pageColor() {
     get baked() { return baked; },
     atlas,
     modelIndex,
+    /** 황지: quality level changed (render/governor.js): page / block tessellation and texture filtering follow it. */
+    setQuality(level) {
+      anisoLevel = level;
+      if (gl3) applyAniso();
+      const mode = meshOf(level);
+      if (mode === meshMode) return;
+      meshMode = mode;
+      const oldPage = pageGeo; const oldBlock = blockGeo;
+      pageGeo = makePageGeo(mode); blockGeo = makeBlockGeo(mode);
+      page.geometry = pageGeo; block.geometry = blockGeo;
+      oldPage.dispose(); oldBlock.dispose();
+    },
     dispose() {
       scene.remove(group);
       scene.remove(table);
